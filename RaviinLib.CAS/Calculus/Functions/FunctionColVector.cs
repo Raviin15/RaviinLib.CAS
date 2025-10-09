@@ -18,13 +18,13 @@ namespace RaviinLib.CAS
             return new FunctionRowVector(Vector);
         }
 
-        public (Matrix<double> A, Vector<double> b) GetSystemForm(List<string> Variables)
+        public (Matrix<double> A, Vector<double> b) GetSystemForm(List<string> Variables = null)
         {
             List<Vector<double>> LHSs = new List<Vector<double>>();
             List<double> RHSs = new List<double>();
             foreach (var func in Vector)
             {
-                var ret = func.GetSystemForm((Variables.Count != 0) ? Variables : this.Variables);
+                var ret = func.GetSystemForm((Variables == null || Variables.Count != 0) ? Variables : this.Variables);
                 LHSs.Add(ret.LHS);
                 RHSs.Add(ret.RHS);
             }

@@ -207,7 +207,7 @@ namespace RaviinLib.CAS
 
         #region Antiderivative
 
-        public Function Antiderivative(string Var)
+        public Function GetAntiderivative(string Var)
         {
             return new Function(IFunction.Antiderivative(Var), Variables);
         }
@@ -459,7 +459,7 @@ namespace RaviinLib.CAS
         }
 
 
-        public Function GetTaylorAproximation(double InitialValue, int Order = 10, bool AproximateFactorial = false)
+        public Function GetTaylorAproximation(double Center, int Order = 10, bool AproximateFactorial = false)
         {
             if (Variables.Count > 1) throw new Exception("Can not get the aproximation with respect to mroe than one variable.");
 
@@ -482,7 +482,7 @@ namespace RaviinLib.CAS
                 return Math.Sqrt((2 * Math.PI * n) * (Math.Pow(n / Math.E, n)));
             };
 
-            Function init = Subs(InitialValue);
+            Function init = Subs(Center);
 
             var prevDeriv = Copy(); //Anything
             int LoopCount = 1;
@@ -490,9 +490,9 @@ namespace RaviinLib.CAS
             do
             {
                 prevDeriv = prevDeriv.Derivative(Variables[0]);
-                var subsVal = prevDeriv.Subs(InitialValue);
+                var subsVal = prevDeriv.Subs(Center);
                 var fact = FactorialFunc(LoopCount);
-                init += (subsVal / fact) * ((new Function(Variables[0]) - InitialValue) ^ LoopCount);
+                init += (subsVal / fact) * ((new Function(Variables[0]) - Center) ^ LoopCount);
                 LoopCount++;
             } while (LoopCount <= Order); // (!Comparer.Equals(prevDeriv.IFunction, new BaseChunk(0,null,1)) &&
 

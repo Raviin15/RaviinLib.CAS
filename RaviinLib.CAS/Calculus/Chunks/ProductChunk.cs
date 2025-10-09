@@ -369,7 +369,10 @@ namespace RaviinLib.CAS
 
         public IChunk Antiderivative(string Var)
         {
-            var anti = Expanded().Simplified()?.Antiderivative(Var) ?? new BaseChunk(0);
+            var ExpSimp = Expanded().Simplified();
+            if (new IChunkComparer().Equals(this, ExpSimp)) throw new Exception($"Can not calculate Antiderivative of {this}");
+            var anti = ExpSimp?.Antiderivative(Var) ?? new BaseChunk(0);
+            
             anti.Multiply(Coeff);
             return anti;
         }

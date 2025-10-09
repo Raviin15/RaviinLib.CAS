@@ -113,81 +113,113 @@ namespace RaviinLib.CAS
 
         public IChunk Derivative(string Var)
         {
+            var ChunkDeriv = Chunk.Derivative(Var);
+            bool isOne = (ChunkDeriv is BaseChunk b && b.Var == null && b.Exp == 1 && b.Coeff == 1);
+
             switch (Function)
             {
                 case Functions.Sin:
-                    return new ProductChunk(Chunk.Derivative(Var), new FuncChunk(Chunk, Functions.Cos, Coeff));
+                    if (isOne) return new FuncChunk(Chunk, Functions.Cos, Coeff);
+                    return new ProductChunk(ChunkDeriv, new FuncChunk(Chunk, Functions.Cos, Coeff));
                 case Functions.Cos:
-                    return new ProductChunk(Chunk.Derivative(Var), new FuncChunk(Chunk, Functions.Sin, Coeff * -1));
+                    if (isOne) return new FuncChunk(Chunk, Functions.Sin, Coeff * -1);
+                    return new ProductChunk(ChunkDeriv, new FuncChunk(Chunk, Functions.Sin, Coeff * -1));
                 case Functions.Tan:
-                    return new ProductChunk(Chunk.Derivative(Var), new ChainChunk(Coeff, new FuncChunk(Chunk, Functions.Sec), new BaseChunk(2, null, 1)));
+                    if (isOne) return new ChainChunk(Coeff, new FuncChunk(Chunk, Functions.Sec), new BaseChunk(2, null, 1));
+                    return new ProductChunk(ChunkDeriv, new ChainChunk(Coeff, new FuncChunk(Chunk, Functions.Sec), new BaseChunk(2, null, 1)));
 
                 case Functions.Sec:
-                    return new ProductChunk(Chunk.Derivative(Var), new ProductChunk(new FuncChunk(Chunk, Functions.Sec), new FuncChunk(Chunk, Functions.Tan))) { Coeff = Coeff };
+                    if (isOne) return new ProductChunk(new FuncChunk(Chunk, Functions.Sec), new FuncChunk(Chunk, Functions.Tan)) { Coeff = Coeff };
+                    return new ProductChunk(ChunkDeriv, new ProductChunk(new FuncChunk(Chunk, Functions.Sec), new FuncChunk(Chunk, Functions.Tan))) { Coeff = Coeff };
                 case Functions.Csc:
-                    return new ProductChunk(Chunk.Derivative(Var), new ProductChunk(new FuncChunk(Chunk, Functions.Csc), new FuncChunk(Chunk, Functions.Cot))) { Coeff = Coeff * -1 };
+                    if (isOne) return new ProductChunk(new FuncChunk(Chunk, Functions.Csc), new FuncChunk(Chunk, Functions.Cot)) { Coeff = Coeff * -1 };
+                    return new ProductChunk(ChunkDeriv, new ProductChunk(new FuncChunk(Chunk, Functions.Csc), new FuncChunk(Chunk, Functions.Cot))) { Coeff = Coeff * -1 };
                 case Functions.Cot:
-                    return new ProductChunk(Chunk.Derivative(Var), new ProductChunk(new FuncChunk(Chunk, Functions.Csc), new FuncChunk(Chunk, Functions.Csc))) { Coeff = Coeff * -1 };
+                    if (isOne) return new ProductChunk(new FuncChunk(Chunk, Functions.Csc), new FuncChunk(Chunk, Functions.Csc)) { Coeff = Coeff * -1 };
+                    return new ProductChunk(ChunkDeriv, new ProductChunk(new FuncChunk(Chunk, Functions.Csc), new FuncChunk(Chunk, Functions.Csc))) { Coeff = Coeff * -1 };
 
                 case Functions.Sinh:
-                    return new ProductChunk(Chunk.Derivative(Var), new FuncChunk(Chunk.Copy(), Functions.Cosh)) { Coeff = Coeff };
+                    if (isOne) return new FuncChunk(Chunk.Copy(), Functions.Cosh) { Coeff = Coeff };
+                    return new ProductChunk(ChunkDeriv, new FuncChunk(Chunk.Copy(), Functions.Cosh)) { Coeff = Coeff };
                 case Functions.Cosh:
-                    return new ProductChunk(Chunk.Derivative(Var), new FuncChunk(Chunk.Copy(), Functions.Sinh)) { Coeff = Coeff };
+                    if (isOne) return new FuncChunk(Chunk.Copy(), Functions.Sinh) { Coeff = Coeff };
+                    return new ProductChunk(ChunkDeriv, new FuncChunk(Chunk.Copy(), Functions.Sinh)) { Coeff = Coeff };
                 case Functions.Tanh:
-                    return new ProductChunk(Chunk.Derivative(Var), new ChainChunk(1, new FuncChunk(Chunk.Copy(), Functions.Sech), new BaseChunk(2, null, 1))) { Coeff = Coeff };
+                    if (isOne) return new ChainChunk(1, new FuncChunk(Chunk.Copy(), Functions.Sech), new BaseChunk(2, null, 1)) { Coeff = Coeff };
+                    return new ProductChunk(ChunkDeriv, new ChainChunk(1, new FuncChunk(Chunk.Copy(), Functions.Sech), new BaseChunk(2, null, 1))) { Coeff = Coeff };
 
                 case Functions.Sech:
-                    return new ProductChunk(Chunk.Derivative(Var), new ProductChunk(new FuncChunk(Chunk.Copy(), Functions.Csch), new FuncChunk(Chunk.Copy(), Functions.Coth))) { Coeff = Coeff * -1 };
+                    if (isOne) return new ProductChunk(new FuncChunk(Chunk.Copy(), Functions.Csch), new FuncChunk(Chunk.Copy(), Functions.Coth)) { Coeff = Coeff * -1 };
+                    return new ProductChunk(ChunkDeriv, new ProductChunk(new FuncChunk(Chunk.Copy(), Functions.Csch), new FuncChunk(Chunk.Copy(), Functions.Coth))) { Coeff = Coeff * -1 };
                 case Functions.Csch:
-                    return new ProductChunk(Chunk.Derivative(Var), new ProductChunk(new FuncChunk(Chunk.Copy(), Functions.Sech), new FuncChunk(Chunk.Copy(), Functions.Tanh))) { Coeff = Coeff * -1 };
+                    if (isOne) return new ProductChunk(new FuncChunk(Chunk.Copy(), Functions.Sech), new FuncChunk(Chunk.Copy(), Functions.Tanh)) { Coeff = Coeff * -1 };
+                    return new ProductChunk(ChunkDeriv, new ProductChunk(new FuncChunk(Chunk.Copy(), Functions.Sech), new FuncChunk(Chunk.Copy(), Functions.Tanh))) { Coeff = Coeff * -1 };
                 case Functions.Coth:
-                    return new ProductChunk(Chunk.Derivative(Var), new ChainChunk(1, new FuncChunk(Chunk.Copy(), Functions.Csch), new BaseChunk(2, null, 1))) { Coeff = Coeff * -1 };
+                    if (isOne) return new ChainChunk(1, new FuncChunk(Chunk.Copy(), Functions.Csch), new BaseChunk(2, null, 1)) { Coeff = Coeff * -1 };
+                    return new ProductChunk(ChunkDeriv, new ChainChunk(1, new FuncChunk(Chunk.Copy(), Functions.Csch), new BaseChunk(2, null, 1))) { Coeff = Coeff * -1 };
 
                 case Functions.ASin:
-                    return new ProductChunk(Chunk.Derivative(Var), new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk(1, null, 1), new ChainChunk(-1, Chunk.Copy(), new BaseChunk(2, null, 1)) }), new BaseChunk(-0.5, null, 1))) { Coeff = Coeff };
+                    if (isOne) return new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk(1, null, 1), new ChainChunk(-1, Chunk.Copy(), new BaseChunk(2, null, 1)) }), new BaseChunk(-0.5, null, 1)) { Coeff = Coeff };
+                    return new ProductChunk(ChunkDeriv, new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk(1, null, 1), new ChainChunk(-1, Chunk.Copy(), new BaseChunk(2, null, 1)) }), new BaseChunk(-0.5, null, 1))) { Coeff = Coeff };
                 case Functions.ACos:
-                return new ProductChunk(Chunk.Derivative(Var), new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk(1, null, 1), new ChainChunk(-1, Chunk.Copy(), new BaseChunk(2, null, 1)) }), new BaseChunk(-0.5, null, 1))) { Coeff = Coeff * -1 };
+                    if (isOne) return new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk(1, null, 1), new ChainChunk(-1, Chunk.Copy(), new BaseChunk(2, null, 1)) }), new BaseChunk(-0.5, null, 1)) { Coeff = Coeff * -1 };
+                    return new ProductChunk(ChunkDeriv, new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk(1, null, 1), new ChainChunk(-1, Chunk.Copy(), new BaseChunk(2, null, 1)) }), new BaseChunk(-0.5, null, 1))) { Coeff = Coeff * -1 };
                 case Functions.ATan:
-                return new ProductChunk(Chunk.Derivative(Var), new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk(1, null, 1), new ChainChunk(-1, Chunk.Copy(), new BaseChunk(2, null, 1)) }), new BaseChunk(-1, null, 1))) { Coeff = Coeff };
+                    if (isOne) return new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk(1, null, 1), new ChainChunk(-1, Chunk.Copy(), new BaseChunk(2, null, 1)) }), new BaseChunk(-1, null, 1)) { Coeff = Coeff };
+                    return new ProductChunk(ChunkDeriv, new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk(1, null, 1), new ChainChunk(-1, Chunk.Copy(), new BaseChunk(2, null, 1)) }), new BaseChunk(-1, null, 1))) { Coeff = Coeff };
 
                 case Functions.ASec:
                     var ASec = Chunk.Copy();
                     ASec.Coeff = Math.Abs(ASec.Coeff);
-                    return new ProductChunk(Chunk.Derivative(Var), new ProductChunk(new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk(1, null, 1), new ChainChunk(-1, Chunk.Copy(), new BaseChunk(2, null, 1)) }), new BaseChunk(-0.5, null, 1)), new ChainChunk(1, ASec, new BaseChunk(-1, null, 1)))) { Coeff = Coeff };
+                    if (isOne) return new ProductChunk(new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk(1, null, 1), new ChainChunk(-1, Chunk.Copy(), new BaseChunk(2, null, 1)) }), new BaseChunk(-0.5, null, 1)), new ChainChunk(1, ASec, new BaseChunk(-1, null, 1))) { Coeff = Coeff };
+                    return new ProductChunk(ChunkDeriv, new ProductChunk(new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk(1, null, 1), new ChainChunk(-1, Chunk.Copy(), new BaseChunk(2, null, 1)) }), new BaseChunk(-0.5, null, 1)), new ChainChunk(1, ASec, new BaseChunk(-1, null, 1)))) { Coeff = Coeff };
                 case Functions.ACsc:
                     var ACsc = Chunk.Copy();
                     ACsc.Coeff = Math.Abs(ACsc.Coeff);
-                    return new ProductChunk(Chunk.Derivative(Var), new ProductChunk(new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk(1, null, 1), new ChainChunk(-1, Chunk.Copy(), new BaseChunk(2, null, 1)) }), new BaseChunk(-0.5, null, 1)), new ChainChunk(1, ACsc, new BaseChunk(-1, null, 1)))) { Coeff = Coeff * -1 };
+                    if (isOne) return new ProductChunk(new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk(1, null, 1), new ChainChunk(-1, Chunk.Copy(), new BaseChunk(2, null, 1)) }), new BaseChunk(-0.5, null, 1)), new ChainChunk(1, ACsc, new BaseChunk(-1, null, 1))) { Coeff = Coeff * -1 };
+                    return new ProductChunk(ChunkDeriv, new ProductChunk(new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk(1, null, 1), new ChainChunk(-1, Chunk.Copy(), new BaseChunk(2, null, 1)) }), new BaseChunk(-0.5, null, 1)), new ChainChunk(1, ACsc, new BaseChunk(-1, null, 1)))) { Coeff = Coeff * -1 };
                 case Functions.ACot:
-                    return new ProductChunk(Chunk.Derivative(Var), new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk(1, null, 1), new ChainChunk(-1, Chunk.Copy(), new BaseChunk(2, null, 1)) }), new BaseChunk(-1, null, 1))) { Coeff = Coeff * -1 };
+                    if (isOne) return new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk(1, null, 1), new ChainChunk(-1, Chunk.Copy(), new BaseChunk(2, null, 1)) }), new BaseChunk(-1, null, 1)) { Coeff = Coeff * -1 };
+                    return new ProductChunk(ChunkDeriv, new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk(1, null, 1), new ChainChunk(-1, Chunk.Copy(), new BaseChunk(2, null, 1)) }), new BaseChunk(-1, null, 1))) { Coeff = Coeff * -1 };
 
                 case Functions.ASinh:
-                    return new ProductChunk(Chunk.Derivative(Var), new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk(1, null, 1), new ChainChunk(1, Chunk.Copy(), new BaseChunk(2, null, 1)) }), new BaseChunk(-0.5, null, 1))) { Coeff = Coeff };
+                    if (isOne) return new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk(1, null, 1), new ChainChunk(1, Chunk.Copy(), new BaseChunk(2, null, 1)) }), new BaseChunk(-0.5, null, 1)) { Coeff = Coeff };
+                    return new ProductChunk(ChunkDeriv, new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk(1, null, 1), new ChainChunk(1, Chunk.Copy(), new BaseChunk(2, null, 1)) }), new BaseChunk(-0.5, null, 1))) { Coeff = Coeff };
                 case Functions.ACosh:
-                    return new ProductChunk(Chunk.Derivative(Var), new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk(-1, null, 1), new ChainChunk(1, Chunk.Copy(), new BaseChunk(2, null, 1)) }), new BaseChunk(-0.5, null, 1))) { Coeff = Coeff };
+                    if (isOne) return new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk(-1, null, 1), new ChainChunk(1, Chunk.Copy(), new BaseChunk(2, null, 1)) }), new BaseChunk(-0.5, null, 1)) { Coeff = Coeff };
+                    return new ProductChunk(ChunkDeriv, new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk(-1, null, 1), new ChainChunk(1, Chunk.Copy(), new BaseChunk(2, null, 1)) }), new BaseChunk(-0.5, null, 1))) { Coeff = Coeff };
                 case Functions.ATanh:
-                    return new ProductChunk(Chunk.Derivative(Var), new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk(1, null, 1), new ChainChunk(1, Chunk.Copy(), new BaseChunk(2, null, 1)) }), new BaseChunk(-1, null, 1))) { Coeff = Coeff };
+                    if (isOne) return new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk(1, null, 1), new ChainChunk(1, Chunk.Copy(), new BaseChunk(2, null, 1)) }), new BaseChunk(-1, null, 1)) { Coeff = Coeff };
+                    return new ProductChunk(ChunkDeriv, new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk(1, null, 1), new ChainChunk(1, Chunk.Copy(), new BaseChunk(2, null, 1)) }), new BaseChunk(-1, null, 1))) { Coeff = Coeff };
 
                 case Functions.ASech:
-                    return new ProductChunk(Chunk.Derivative(Var), new ProductChunk(new ChainChunk(1, Chunk.Copy(), new BaseChunk(-1, null, 1)), new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk(1, null, 1), new ChainChunk(1, Chunk.Copy(), new BaseChunk(2, null, 1)) }), new BaseChunk(-0.5, null, 1)))) { Coeff = Coeff * -1 };
+                    if (isOne) return new ProductChunk(new ChainChunk(1, Chunk.Copy(), new BaseChunk(-1, null, 1)), new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk(1, null, 1), new ChainChunk(1, Chunk.Copy(), new BaseChunk(2, null, 1)) }), new BaseChunk(-0.5, null, 1))) { Coeff = Coeff * -1 };
+                    return new ProductChunk(ChunkDeriv, new ProductChunk(new ChainChunk(1, Chunk.Copy(), new BaseChunk(-1, null, 1)), new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk(1, null, 1), new ChainChunk(1, Chunk.Copy(), new BaseChunk(2, null, 1)) }), new BaseChunk(-0.5, null, 1)))) { Coeff = Coeff * -1 };
                 case Functions.ACsch:
                     var ACsch = Chunk.Copy();
                     ACsch.Coeff = Math.Abs(ACsch.Coeff);
-                    return new ProductChunk(Chunk.Derivative(Var), new ProductChunk(new ChainChunk(1, ACsch, new BaseChunk(-1, null, 1)), new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk(1, null, 1), new ChainChunk(1, Chunk.Copy(), new BaseChunk(2, null, 1)) }), new BaseChunk(-0.5, null, 1)))) { Coeff = Coeff * -1 };
+                    if (isOne) return new ProductChunk(new ChainChunk(1, ACsch, new BaseChunk(-1, null, 1)), new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk(1, null, 1), new ChainChunk(1, Chunk.Copy(), new BaseChunk(2, null, 1)) }), new BaseChunk(-0.5, null, 1))) { Coeff = Coeff * -1 };
+                    return new ProductChunk(ChunkDeriv, new ProductChunk(new ChainChunk(1, ACsch, new BaseChunk(-1, null, 1)), new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk(1, null, 1), new ChainChunk(1, Chunk.Copy(), new BaseChunk(2, null, 1)) }), new BaseChunk(-0.5, null, 1)))) { Coeff = Coeff * -1 };
                 case Functions.ACoth:
-                    return new ProductChunk(Chunk.Derivative(Var), new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk(1, null, 1), new ChainChunk(1, Chunk.Copy(), new BaseChunk(2, null, 1)) }), new BaseChunk(-1, null, 1))) { Coeff = Coeff };
+                    if (isOne) return new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk(1, null, 1), new ChainChunk(1, Chunk.Copy(), new BaseChunk(2, null, 1)) }), new BaseChunk(-1, null, 1)) { Coeff = Coeff };
+                    return new ProductChunk(ChunkDeriv, new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk(1, null, 1), new ChainChunk(1, Chunk.Copy(), new BaseChunk(2, null, 1)) }), new BaseChunk(-1, null, 1))) { Coeff = Coeff };
 
                 case Functions.Exp:
-                    return new ProductChunk(Copy(), Chunk.Derivative(Var));
+                    if (isOne) return Copy();
+                    return new ProductChunk(Copy(), ChunkDeriv);
                 case Functions.ln:
-                    return new ProductChunk(Chunk.Derivative(Var), new ChainChunk(1, Chunk.Copy(), new BaseChunk(-1, null, 1))) { Coeff = Coeff };
+                    if (isOne) return new ChainChunk(1, Chunk.Copy(), new BaseChunk(-1, null, 1)) { Coeff = Coeff };
+                    return new ProductChunk(ChunkDeriv, new ChainChunk(1, Chunk.Copy(), new BaseChunk(-1, null, 1))) { Coeff = Coeff };
                 case Functions.log:
-                    return new ProductChunk(Chunk.Derivative(Var), new ChainChunk(1,new ProductChunk(Copy(), new FuncChunk(new BaseChunk(10,null,1), Functions.ln)), new BaseChunk(-1, null, 1))) { Coeff = Coeff };
+                    if (isOne) return new ChainChunk(1, new ProductChunk(Copy(), new FuncChunk(new BaseChunk(10, null, 1), Functions.ln)), new BaseChunk(-1, null, 1)) { Coeff = Coeff };
+                    return new ProductChunk(ChunkDeriv, new ChainChunk(1, new ProductChunk(Copy(), new FuncChunk(new BaseChunk(10, null, 1), Functions.ln)), new BaseChunk(-1, null, 1))) { Coeff = Coeff };
 
                 case Functions.sqrt:
-                    return new ProductChunk(Chunk.Derivative(Var), new ChainChunk(Coeff / 2, Chunk.Copy(), new BaseChunk(-0.5, null, 1)));
+                    if (isOne) return new ChainChunk(Coeff / 2, Chunk.Copy(), new BaseChunk(-0.5, null, 1));
+                    return new ProductChunk(ChunkDeriv, new ChainChunk(Coeff / 2, Chunk.Copy(), new BaseChunk(-0.5, null, 1)));
                 case Functions.cbrt:
-                    return new ProductChunk(Chunk.Derivative(Var), new ChainChunk(Coeff / 3, Chunk.Copy(), new BaseChunk(-2.0 / 3.0, null, 1) ));
+                    if (isOne) return new ChainChunk(Coeff / 3, Chunk.Copy(), new BaseChunk(-2.0 / 3.0, null, 1));
+                    return new ProductChunk(ChunkDeriv, new ChainChunk(Coeff / 3, Chunk.Copy(), new BaseChunk(-2.0 / 3.0, null, 1)));
 
                 case Functions.Abs:
                     //if (Chunk is BaseChunk b && b.Exp == 1)
