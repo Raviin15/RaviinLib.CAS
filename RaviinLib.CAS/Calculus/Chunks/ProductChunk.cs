@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Collections.Generic;
+using MathNet.Numerics;
 
 namespace RaviinLib.CAS
 {
@@ -184,8 +185,22 @@ namespace RaviinLib.CAS
         {
             List<IChunk> Chunks = new List<IChunk>();
 
-            Chunks.Add(new ProductChunk(Chunk1.Derivative(Var), Chunk2));
-            Chunks.Add(new ProductChunk(Chunk1, Chunk2.Derivative(Var)));
+            var Chunk1Derivative = Chunk1.Derivative(Var);
+            var Chunk2Derivative = Chunk2.Derivative(Var);
+
+            if (Chunk1Derivative is BaseChunk b && b.Var == null && b.Exp == 1)
+            {
+                if (b.Coeff == 1) Chunks.Add(Chunk2);
+                else if (b.Coeff != 0) Chunks.Add(new ProductChunk(Chunk1Derivative, Chunk2));
+            }
+            else Chunks.Add(new ProductChunk(Chunk1Derivative, Chunk2));
+
+            if (Chunk2Derivative is BaseChunk b2 && b2.Var == null && b2.Exp == 1)
+            {
+                if (b2.Coeff == 1) Chunks.Add(Chunk1);
+                else if (b2.Coeff != 0) Chunks.Add(new ProductChunk(Chunk1, Chunk2Derivative));
+            }
+            else Chunks.Add(new ProductChunk(Chunk1, Chunk2Derivative));
 
             return new SumChunk(Chunks);
         }

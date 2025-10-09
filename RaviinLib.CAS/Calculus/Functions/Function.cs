@@ -459,35 +459,42 @@ namespace RaviinLib.CAS
         }
 
 
-        public Function GetTaylorAproximation(double InitialValue, int Order = 10)
+        public Function GetTaylorAproximation(double InitialValue, int Order = 10, bool AproximateFactorial = false)
         {
             if (Variables.Count > 1) throw new Exception("Can not get the aproximation with respect to mroe than one variable.");
 
             var Comparer = new IChunkComparer();
 
-            double Factorial(double n)
+            Func<double, double> Factorial = (double n) => // Dalton Helped
             {
                 if (n < 0)
                     throw new ArgumentException("Negative numbers are not allowed.");
 
                 double result = n;
-                for (double i = n-1; i >= 1; i--)
+                for (double i = n - 1; i >= 1; i--)
                     result *= i;
 
                 return result;
-            }
+            };
+
+            Func<double, double> FactorialAprox = (double n) =>
+            {
+                return Math.Sqrt((2 * Math.PI * n) * (Math.Pow(n / Math.E, n)));
+            };
 
             Function init = Subs(InitialValue);
 
             var prevDeriv = Copy(); //Anything
             int LoopCount = 1;
+            Func<double, double> FactorialFunc = (AproximateFactorial) ? FactorialAprox : Factorial;
             do
             {
                 prevDeriv = prevDeriv.Derivative(Variables[0]);
                 var subsVal = prevDeriv.Subs(InitialValue);
-                init += (subsVal / Factorial(LoopCount)) * ((new Function(Variables[0]) - InitialValue) ^ LoopCount);
+                var fact = FactorialFunc(LoopCount);
+                init += (subsVal / fact) * ((new Function(Variables[0]) - InitialValue) ^ LoopCount);
                 LoopCount++;
-            } while (!Comparer.Equals(prevDeriv.IFunction, new BaseChunk(0,null,1)) && LoopCount <= Order);
+            } while (LoopCount <= Order); // (!Comparer.Equals(prevDeriv.IFunction, new BaseChunk(0,null,1)) &&
 
             return init;
         }
