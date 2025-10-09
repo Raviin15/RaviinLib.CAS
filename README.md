@@ -15,11 +15,11 @@ Taylor Series Aproximations
 UFT-16 Character Set  
 and More!  
 
-# Basics
+# Getting Started
 
 ### Functions
 The Function class is the main class of the library. Everything revolves around it.  
-##### Constructing Functions
+#### Constructing Functions
 ```cs
 Function Ex1 = new Function("x^2", new List<string>() { "x" }); // Manually set variables
 Function Ex2 = new Function("x^2"); // Auto detect variables
@@ -31,7 +31,7 @@ Function Ex3 = "x^2"; // Auto detect variables
 Function Ex4 = ( Ex1 + "2" ) / ( Ex2 + 1 ); // ( x^2 + 2 ) / ( x^2 + 1 )
 ```
 
-##### Common Function Methods
+#### Common Function Methods
 ```cs
 Function Ex = "x^2 * x";
 
@@ -45,7 +45,7 @@ Function Replace = Ex.Replace("x", "y"); // Replaces variable x with y
 Function ReplaceAlternative = Ex["x","y"]; // Replaces variable x with y (alternate syntax)
 ```
 
-##### Viewing Common Function Methods
+#### Viewing Common Function Methods
 ```cs
 Console.WriteLine($"Original: {Ex}");
 Console.WriteLine($"Simplified: {Simplified}");
@@ -69,7 +69,72 @@ Replace: (y)^2 * (y)^1
 ReplaceAlternative: (y)^2 * (y)^1
 ```
 
-##### Taylor Series Aproximation
+# Functions In Depth
+
+#### Properties vs Methods
+Most of the available processes for functions come in both Method and Property form.
+For example:
+```cs
+Ex.GetSimplified();
+Ex.Simplified;
+```
+These both call the same underlying functions. However, if we look one level under the hood, "Ex.Simplified" calls "GetSimplified()" and caches this value for later access. That way the next time "Ex.Simplified" is called there is no calculation overhead.
+```cs
+private Function _Simplified = null;
+public Function Simplified
+{
+    get
+    {
+        if (_Simplified == null) _Simplified = GetSimplified();
+        return _Simplified;
+    }
+}
+```
+
+#### Subs()
+"Subs()" is used when you need to substitute values into a funcation and you need a number as an output. This function requires **ALL** variables to have a valid substition, as otherwise this calculation would be impossible.  
+For example:
+```cs
+Function ExSubs = "x + y";
+
+Dictionary<string,double> Dict = new Dictionary<string,double>() { {"x",2} , {"y",1} };
+ExSubs.Subs(Dict); // Correct
+
+Dictionary<string,double> IncorrectDict = new Dictionary<string,double>() { {"x",2} };
+ExSubs.Subs(IncorrectDict); // Incorrect
+```
+If creating a dictionary every time is annoying don't worry! If you know the order of the variables list (Function.Variables) then you can just pass them in as a list!  
+```cs
+List<double> Vals = new List<double>(){2,1};
+ExSubs.Subs(Vals); // "x" = 2 | "y" = 1
+```
+If your function only contains one variable you can also just pass in a double without creating a List or Dictionary.
+```cs
+Function ExSubs2 = "x";
+ExSubs2.Subs(2);
+```
+If your Function has several variables, but you want to subsitute all of them to the same value you can use "Function.SubsAll()". This will substitute the value into all variables.
+```cs
+ExSubs.SubsAll(2); // "x" = 2 | "y" = 2
+```
+
+#### Replace()
+Replace works very simmilar to Subs(). Except instead of returning a double, it returns another Function. This has the advantage of not requiring all variables to be replaced, and whole Functions can be replaced into other functions!
+```cs
+Function ExReplace = "x^2 + y";
+Function ExReplace2 = "0.25z";
+
+Dictionary<string,Function> Dict = new Dictionary<string,Function>() { {"x", ExReplace2} };
+ExReplace.Replace(Dict); // (0.25z)^2 + y
+```
+Alternatives for parameters of the Replace() function follow the same scheme as Subs().  
+In addition to the others Subs() has, Replace() has a shortcut syntax for cleaner visual chains of replacement.
+```cs
+Function ExReplace3 = "x + y + z";
+_ = ExReplace3["x","g^2"]["y","g"]["z","1"]; // (g^2)^1 + (g)^1 + (1)^1
+```
+
+#### Taylor Series Aproximation
 ```cs
 Function Sin = "Sin(x)";
 double Center = 0;
