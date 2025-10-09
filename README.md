@@ -68,3 +68,25 @@ Substitution: 8
 Replace: (y)^2 * (y)^1
 ReplaceAlternative: (y)^2 * (y)^1
 ```
+
+##### Taylor Series Aproximation
+```cs
+Function Sin = "Sin(x)";
+double Center = 0;
+int Order = 3;
+Function SinAprox = Sin.GetTaylorAproximation(Center,Order);
+Console.WriteLine($"Aprox: {SinAprox.Simplified}");
+```
+```
+Aprox: -0.16666666666666666x^3 + x
+```
+  
+If speed is what you're after and not accuracy consider using aproximate factorial calculation.  
+This is only recomended for large functions that grow after derivation.  
+```cs
+SinAprox = Sin.GetTaylorAproximation(Center,Order,true);
+Console.WriteLine($"Aprox: {SinAprox.Simplified}");
+```
+```
+Aprox: -0.19865947308564935x^3 + 0.6577446234794568x
+```
