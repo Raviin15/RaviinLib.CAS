@@ -14,6 +14,9 @@ Piecewise Linear Aproximations
 Taylor Series Aproximations  
 UFT-16 Character Set  
 and More!  
+  
+  
+*This README is ongoing and is **NOT** Complete*
 
 # Getting Started
 
