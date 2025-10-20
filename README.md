@@ -2,7 +2,7 @@
 
 **This library supports:**  
 String Parsing  
-Trigiometric Functions (and others)  
+Triginometric Functions (and others)  
 Derivatives (Including Partial)  
 Antiderivatives (Basic)  
 Function Expansion  
@@ -38,14 +38,14 @@ Function Ex4 = ( Ex1 + "2" ) / ( Ex2 + 1 ); // ( x^2 + 2 ) / ( x^2 + 1 )
 ```cs
 Function Ex = "x^2 * x";
 
-Function Simplified = Ex.Simplified; // Simplifies the function
-Function Expanded = Ex.Expanded; // Expands the function
-Function[] Gradiant = Ex.Gradiant; // Gets the gradiant of the function (array of partial derivatives)
-Function Derivative = Ex.Derivative("x"); // Gets the derivative with respect to x
-Function SimplifiedDerivative = Derivative.Simplified; // Simplifies the derivative
-double Subs = Ex.Subs(2); // Substitutes x = 2 into the function
-Function Replace = Ex.Replace("x", "y"); // Replaces variable x with y
-Function ReplaceAlternative = Ex["x","y"]; // Replaces variable x with y (alternate syntax)
+Function Simplified = Ex.Simplified;
+Function Expanded = Ex.Expanded;
+Function[] Gradiant = Ex.Gradiant;
+Function Derivative = Ex.Derivative("x");
+Function SimplifiedDerivative = Derivative.Simplified;
+double Subs = Ex.Subs(2);
+Function Replace = Ex.Replace("x", "y");
+Function ReplaceAlternative = Ex["x","y"];
 ```
 
 #### Viewing Common Function Methods
@@ -93,6 +93,27 @@ public Function Simplified
     }
 }
 ```
+
+Another important note is all calculations are returned as a new object.  
+The original Function is never modified. This means you can chain calculations without worrying about modifying the original function.
+The only exception to this is the "Function.Simplify()" method, which modifies the original function in place.
+```cs
+Function Ex = "x^2 * x";
+Function Ex2 = Ex.Simplified.Expanded.Derivative("x").Simplified; // Chains calculations without modifying Ex
+Console.WriteLine($"Ex: {Ex}");
+Console.WriteLine($"Ex2: {Ex2}");
+
+Console.WriteLine($"Before Simplify(): {Ex}");
+Ex.Simplify(); // Modifies Ex in place
+Console.WriteLine($"After Simplify(): {Ex}");
+```
+```
+Ex: x^2 * x
+Ex2: 3x^2
+Before Simplify(): x^2 * x
+After Simplify(): x^3
+```
+
 
 #### Subs()
 "Subs()" is used when you need to substitute values into a funcation and you need a number as an output. This function requires **ALL** variables to have a valid substition, as otherwise this calculation would be impossible.  
