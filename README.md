@@ -186,4 +186,4 @@ List<Function> Funcs = new() {f,f1,f3,f15};
 
 Plot(Funcs, new ScottPlot.Range(-10, 10), new ScottPlot.Range(10,10), @"C:\Users\Raviin\Downloads\Plot.png");
 ```
-![ Plot example image failed to load... :'( ](RaviinLib.CAS/ReadMeReferences/PlotExample.png)
+![ Plot example image failed to load... :'( ](https://raw.githubusercontent.com/Raviin15/RaviinLib.CAS/refs/heads/master/RaviinLib.CAS/ReadMeReferences/PlotExample.png)
