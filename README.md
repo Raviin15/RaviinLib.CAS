@@ -137,7 +137,10 @@ Function ExReplace3 = "x + y + z";
 _ = ExReplace3["x","g^2"]["y","g"]["z","1"]; // (g^2)^1 + (g)^1 + (1)^1
 ```
 
-#### Taylor Series Aproximation
+#### GetTaylorAproximation()
+The Taylor Series Aproximations are used to aproximate functions as polynomials around a center point.
+
+This is a classic example aproximating Sin(x).
 ```cs
 Function Sin = "Sin(x)";
 double Center = 0;
