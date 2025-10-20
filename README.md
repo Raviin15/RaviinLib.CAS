@@ -148,16 +148,6 @@ Console.WriteLine($"Aprox: {SinAprox.Simplified}");
 ```
 Aprox: -0.16666666666666666x^3 + x
 ```
-  
-If speed is what you're after and not accuracy consider using aproximate factorial calculation.  
-This is only recomended for large functions that grow after derivation.  
-```cs
-SinAprox = Sin.GetTaylorAproximation(Center,Order,true);
-Console.WriteLine($"Aprox: {SinAprox.Simplified}");
-```
-```
-Aprox: -0.19865947308564935x^3 + 0.6577446234794568x
-```
 
 # Graphing  
 If you are needing to graph a function, I highly recomend the ScottPlot library. ScottPlot has built in "Function" ploting which makes graphing extremely easy!  
