@@ -158,3 +158,42 @@ Console.WriteLine($"Aprox: {SinAprox.Simplified}");
 ```
 Aprox: -0.19865947308564935x^3 + 0.6577446234794568x
 ```
+
+# Graphing  
+If you are needing to graph a function, I highly recomend the ScottPlot library. ScottPlot has built in "Function" ploting which makes graphing extremely easy!  
+ScottPlot also has prebuilt UserControls for most of the common application developement platforms such as WPF, Maui, and Blazor for displaying the graphs natively.
+  
+The method for adding functions to a plot is "Plot.Add.Function()", where the method takes in a Func<double,double> which can easly be made by creating a lambda expression that calls the Function.Subs() method.  
+```cs
+ScottPlot.Plot Plot = new ScottPlot.Plot();
+Function Fx = "Sin(x)";
+Plot.Add.Function((x) => Fx.Subs(x));
+```
+  
+This is an example graphing multiple Taylor Series Aproximations of Sin(x) on a single graph.  
+```cs
+void Plot(List<Function> Functions, ScottPlot.Range xRange, ScottPlot.Range yRange, string Path)
+{
+    ScottPlot.Plot Plot = new ScottPlot.Plot();
+
+    foreach (var Fx in Functions)
+    {
+        Plot.Add.Function((x) => Fx.Subs(x)); // <-- Adding Functions to the plot
+    }
+
+    Plot.Axes.SetLimits(xRange.Min, xRange.Max, yRange.Min, yRange.Max);
+
+    Plot.SavePng(Path, 400, 300);
+}
+
+Function f = "Sin(x)";
+Function f1 = f.GetTaylorAproximation(0,1);
+Function f2 = f.GetTaylorAproximation(0,2);
+Function f3 = f.GetTaylorAproximation(0,3);
+Function f15 = f.GetTaylorAproximation(0,15);
+
+List<Function> Funcs = new() {f,f1,f3,f15};
+
+Plot(Funcs, new ScottPlot.Range(-10, 10), new ScottPlot.Range(10,10), @"C:\Users\Raviin\Downloads\Plot.png");
+```
+![ Plot example image failed to load... :'( ](RaviinLib.CAS/ReadMeReferences/PlotExample.png)
