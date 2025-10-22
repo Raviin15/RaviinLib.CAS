@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace RaviinLib.CAS
 {
@@ -222,6 +223,11 @@ namespace RaviinLib.CAS
             {
                 throw new NotImplementedException();
             }
+        }
+
+        public List<string> GetVariables()
+        {
+            return Chunk.GetVariables().Union(Exp.GetVariables()).ToList();
         }
     }
 }

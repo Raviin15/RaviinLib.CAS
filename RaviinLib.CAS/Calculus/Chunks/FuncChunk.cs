@@ -481,5 +481,11 @@ namespace RaviinLib.CAS
         {
             throw new NotImplementedException();
         }
+
+        public List<string> GetVariables()
+        {
+            if (SecondChunk == null) return Chunk.GetVariables();
+            return Chunk.GetVariables().Union(SecondChunk.GetVariables()).ToList();
+        }
     }
 }

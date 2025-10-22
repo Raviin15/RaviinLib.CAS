@@ -279,5 +279,10 @@ namespace RaviinLib.CAS
             }
             return new SumChunk(newChunks) { Coeff = Coeff };
         }
+
+        public List<string> GetVariables()
+        {
+            return Chunks.SelectMany(c => c.GetVariables()).Distinct().ToList();
+        }
     }
 }

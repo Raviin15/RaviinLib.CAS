@@ -376,5 +376,10 @@ namespace RaviinLib.CAS
             anti.Multiply(Coeff);
             return anti;
         }
+
+        public List<string> GetVariables()
+        {
+            return Chunk1.GetVariables().Union(Chunk2.GetVariables()).ToList();
+        }
     }
 }

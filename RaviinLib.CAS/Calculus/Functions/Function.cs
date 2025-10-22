@@ -602,7 +602,8 @@ namespace RaviinLib.CAS
         }
         public Function Replace(Dictionary<string, IChunk> Vals)
         {
-            return new Function(IFunction.Replace(Vals), Variables);
+            var Chunk = IFunction.Replace(Vals);
+            return new Function(Chunk, Chunk.GetVariables());
         }
         public Function[] ReplaceGrad(string Variable, Function Val)
         {
