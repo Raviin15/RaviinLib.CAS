@@ -462,10 +462,11 @@ namespace RaviinLib.CAS
         /// Computes the Taylor Series Aproximation of the function around a specified center point up to a given order.
         /// </summary>
         /// <param name="Center">A value representing the center of the aproximation.</param>
-        /// <param name="Order">A value representing the requested order of the function used to aproximate the original function.</param>
+        /// <param name="Order">A value representing the requested order of the function used to aproximate the original function. Value can not exceed 170 due to double overflow.</param>
         /// <returns>A <see cref="Function"/> representing the aprixmation of the original function.</returns>
         public Function GetTaylorAproximation(double Center, int Order)
         {
+            if (Order > 170) Order = 170;
             if (Variables.Count > 1) throw new Exception("Can not get the aproximation with respect to mroe than one variable.");
 
             var Comparer = new IChunkComparer();
@@ -474,13 +475,15 @@ namespace RaviinLib.CAS
 
             var prevDeriv = Copy(); //Anything
             int LoopCount = 1;
-            int Factorial = 1;
+            double Factorial = 1;
             do
             {
+                Factorial *= LoopCount;
+
                 prevDeriv = prevDeriv.Derivative(Variables[0]);
                 var subsVal = prevDeriv.Subs(Center);
-                Factorial = Factorial * (Factorial + 1);
                 init += (subsVal / Factorial) * ((new Function(Variables[0]) - Center) ^ LoopCount);
+
                 LoopCount++;
             } while (LoopCount <= Order); // (!Comparer.Equals(prevDeriv.IFunction, new BaseChunk(0,null,1)) &&
 
