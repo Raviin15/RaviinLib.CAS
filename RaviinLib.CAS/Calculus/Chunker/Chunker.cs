@@ -492,9 +492,24 @@ namespace RaviinLib.CAS
             }
 
 
+            if (Variables.Contains(Fx)) 
+            { 
+                b = new BaseChunk(Fx);
+                return true;
+            }
 
             bool ContainsVariable = varIndexs.Count() > 0;
             var powIndex = Fx.IndexOf('^');
+
+            if (powIndex != -1)
+            {
+                var split = Fx.Split('^');
+                if (split.Length == 2 && Variables.Contains(Fx))
+                {
+                    b = new BaseChunk(1,split[0], double.Parse(split[1]));
+                    return true;
+                }
+            }
 
             if (powIndex != -1) // a^() or ax^()
             {
