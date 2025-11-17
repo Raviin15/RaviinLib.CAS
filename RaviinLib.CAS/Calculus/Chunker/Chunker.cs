@@ -19,6 +19,8 @@ namespace RaviinLib.CAS
         public static readonly List<char> DissalowedVarCharsExcludingNumbers = DissalowedVarChars.Where(c => !int.TryParse(c.ToString(), out _)).ToList();
         public static List<string> GetVariables(string Function)
         {
+            Function = Function.Replace(" ", "");
+
             #region Replace functions to char equivilents
             for (int i = 0; i < FunctionStrings.Count; i++)
             {
