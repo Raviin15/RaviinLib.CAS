@@ -276,7 +276,9 @@ namespace RaviinLib.CAS
                 return InnerFunc.Chunk.Copy().Simplified();
             }
 
-            return Chunk.Copy();
+            var Copy = Chunk.Copy();
+            ((FuncChunk)((FuncChunk)Copy).Chunk).Chunk = ((FuncChunk)((FuncChunk)Copy).Chunk).Chunk.Simplified();
+            return Copy;
         }
 
         private bool IsInversePair(Functions OuterFunc, Functions InnerFunc)
