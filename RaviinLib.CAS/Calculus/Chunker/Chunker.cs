@@ -25,7 +25,7 @@ namespace RaviinLib.CAS
             for (int i = 0; i < FunctionStrings.Count; i++)
             {
                 string charEquiv = new string(FunctionChars[i], 1);
-                Function = Function.Replace(FunctionStrings[i], charEquiv);
+                Function = Function.Replace(FunctionStrings[i] + '(', charEquiv + '(');
             }
             Function = Function.Replace("π", Math.PI.ToString());
             //Function = Function.Replace("e", Math.E.ToString());
@@ -102,7 +102,7 @@ namespace RaviinLib.CAS
             for (int i = 0; i < FunctionStrings.Count; i++)
             {
                 string charEquiv = new string(FunctionChars[i], 1);
-                Fx = Fx.Replace(FunctionStrings[i], charEquiv);
+                Fx = Fx.Replace(FunctionStrings[i] + '(', charEquiv + '(');
             }
             Fx = Fx.Replace("π", Math.PI.ToString());
             //Fx = Fx.Replace("e", Math.E.ToString());
@@ -251,16 +251,35 @@ namespace RaviinLib.CAS
             var f = CheckFuncChunk(Fx);
             if (f.IsFunc)
             {
-                double Coeff = double.Parse(f.Substrings.Coeff);
                 double Exp = double.Parse(f.Substrings.Exp);
                 IChunk SecondChunk = (f.Substrings.SecondChunk == "") ? null : SubChunk(f.Substrings.SecondChunk, Variables);
 
-                if (Exp != 1)
+                if (double.TryParse(f.Substrings.Coeff, out double Coeff))
                 {
-                    return new ChainChunk(Coeff, new FuncChunk(SubChunk(f.Substrings.Chunk, Variables), f.Substrings.Func) { SecondChunk = SecondChunk }, new BaseChunk(Exp, null, 1));
-                }
+                    if (Exp != 1)
+                    {
+                        return new ChainChunk(Coeff, new FuncChunk(SubChunk(f.Substrings.Chunk, Variables), f.Substrings.Func) { SecondChunk = SecondChunk }, new BaseChunk(Exp, null, 1));
+                    }
 
-                return new FuncChunk(SubChunk(f.Substrings.Chunk, Variables), f.Substrings.Func, Coeff) { SecondChunk = SecondChunk };
+                    return new FuncChunk(SubChunk(f.Substrings.Chunk, Variables), f.Substrings.Func, Coeff) { SecondChunk = SecondChunk };
+                }
+                else
+                {
+                    try
+                    {
+                        IChunk ICoeff = SubChunk(f.Substrings.Coeff, Variables);
+
+                        if (Exp != 1)
+                        {
+                            return new ProductChunk(ICoeff,new ChainChunk(1, new FuncChunk(SubChunk(f.Substrings.Chunk, Variables), f.Substrings.Func) { SecondChunk = SecondChunk }, new BaseChunk(Exp, null, 1)));
+                        }
+
+                        return new ProductChunk(ICoeff, new FuncChunk(SubChunk(f.Substrings.Chunk, Variables), f.Substrings.Func) { SecondChunk = SecondChunk });
+                    }
+                    catch (Exception)
+                    {
+                    }
+                }
             }
 
             var c = CheckChainChunk(Fx);
@@ -272,6 +291,19 @@ namespace RaviinLib.CAS
                     //double Exp = double.Parse(c.Substrings.Exp);
 
                     return new ChainChunk(Coeff, SubChunk(c.Substrings.Chunk, Variables), Exp);
+                }
+                else
+                {
+                    try
+                    {
+                        IChunk ICoeff = SubChunk(c.Substrings.Coeff, Variables);
+                        IChunk Exp = SubChunk(c.Substrings.Exp, Variables);
+
+                        return new ProductChunk(ICoeff,new ChainChunk(1, SubChunk(c.Substrings.Chunk, Variables), Exp));
+                    }
+                    catch (Exception)
+                    {
+                    }
                 }
             }
 
@@ -468,30 +500,42 @@ namespace RaviinLib.CAS
         {
             b = null;
 
-            List<int> varIndexs = new List<int>();//Variables.Select(c => Fx.IndexOf(c)).Where(c => c != -1);
-            for (int i = 0; i < Fx.Length; i++)
+            int varIndex = -1;//Variables.Select(c => Fx.IndexOf(c)).Where(c => c != -1);
+
+            foreach (var var in Variables)
             {
-                if (!DissalowedVarChars.Contains(Fx[i]))
-                {
-                    int start = i;
-                    int end = i;
-
-                    while (end + 1 != Fx.Length && !DissalowedVarCharsExcludingNumbers.Contains(Fx[end + 1]) && (!Variables.Contains(Fx.Substring(start, end - start + 1)))) // || !Variables.Contains($"{Fx[end]}")
-                    {
-
-
-                        i++;
-                        end++;
-
-                        var p = end + 1 != Fx.Length;
-                        var y = !Variables.Contains(Fx.Substring(start, end - start + 1));
-                        var z = !Variables.Contains($"{Fx[end]}");
-                    }
-
-                    varIndexs.Add(start);
-                    //string Var = Fx.Substring(start, end - start + 1);
-                }
+                var ind = Fx.IndexOf(var);
+                if (ind != -1 && ind < varIndex) { varIndex = ind; continue; }
+                if (ind != -1 && varIndex == -1) varIndex = ind;
             }
+
+            //for (int i = 0; i < Fx.Length; i++)
+            //{
+            //    if (!DissalowedVarChars.Contains(Fx[i]))
+            //    {
+            //        int start = i;
+            //        int end = i;
+
+            //        var wasd1 = !DissalowedVarCharsExcludingNumbers.Contains(Fx[end + 1]);
+            //        var subst = Fx.Substring(start, end - start + 1);
+            //        var wasd2 = (!Variables.Contains(subst));
+
+            //        while (end + 1 != Fx.Length && (wasd1 && wasd2) ) // || !Variables.Contains($"{Fx[end]}")
+            //        {
+
+
+            //            i++;
+            //            end++;
+
+            //            var p = end + 1 != Fx.Length;
+            //            var y = !Variables.Contains(Fx.Substring(start, end - start + 1));
+            //            var z = !Variables.Contains($"{Fx[end]}");
+            //        }
+
+            //        varIndexs.Add(start);
+            //        //string Var = Fx.Substring(start, end - start + 1);
+            //    }
+            //}
 
 
             if (Variables.Contains(Fx)) 
@@ -500,7 +544,8 @@ namespace RaviinLib.CAS
                 return true;
             }
 
-            bool ContainsVariable = varIndexs.Count() > 0;
+            //bool ContainsVariable = varIndexs.Count() > 0;
+            bool ContainsVariable = varIndex != -1;
             var powIndex = Fx.IndexOf('^');
 
             if (powIndex != -1)
@@ -537,7 +582,8 @@ namespace RaviinLib.CAS
                 }
                 else //x^b or ax^b or ax^() or x^()
                 {
-                    int varStartIndex = varIndexs.OrderBy(c => c).First();
+                    //int varStartIndex = varIndexs.OrderBy(c => c).First();
+                    int varStartIndex = varIndex;
                     string var = Fx.Substring(varStartIndex, powIndex - varStartIndex);
                     string coeff = Fx.Substring(0, varStartIndex);
                     coeff = (coeff == "") ? "1" : (coeff == "-") ? "-1" : coeff;
@@ -566,136 +612,27 @@ namespace RaviinLib.CAS
 
 
             }
-            else if (varIndexs.Count() < 2 && powIndex == -1) //a or ax
+            else if (powIndex == -1) //a or ax
             {
                 if (!ContainsVariable && double.TryParse(Fx, out double Num)) //2
                 {
                     b = new BaseChunk(Num, null, 1);
                     return true;
                 }
-                else if (varIndexs.First() == 0) //x
+                else if (varIndex == 0) //x
                 {
                     b = new BaseChunk(1, Fx, 1);
                     return true;
                 }
-                else if (double.TryParse((Fx.Substring(0, varIndexs.First()) == "-") ? "-1" : Fx.Substring(0, varIndexs.First()), out Num))//2x
+                else if (double.TryParse((Fx.Substring(0, varIndex) == "-") ? "-1" : Fx.Substring(0, varIndex), out Num))//2x
                 {
-                    b = new BaseChunk(Num, Fx.Substring(varIndexs.First()), 1);
+                    b = new BaseChunk(Num, Fx.Substring(varIndex), 1);
                     return true;
                 }
             }
 
             b = null;
             return false;
-
-            #region Old
-            //for (int i = 0; i < Fx.Length; i++)
-            //{
-            //    if (!DissalowedVarChars.Contains(Fx[i]))
-            //    {
-            //        int start = i;
-            //        int end = i;
-            //        while (end + 1 != Fx.Length && !DissalowedVarCharsExcludingNumbers.Contains(Fx[end + 1]) && (Variables.Contains(Fx.Substring(start, end - start + 2)) || !Variables.Contains($"{Fx[end]}")))
-            //        {
-            //            i++;
-            //            end++;
-            //        }
-
-            //        string sCoeff = (start == 0) ? "1" : Fx.Substring(0, start);
-            //        sCoeff = (sCoeff == "-") ? "-1" : sCoeff;
-            //        string sExp = (end + 2 >= Fx.Length ) ? "1" : Fx.Substring(end + 2);
-
-            //        bool Parsed = double.TryParse(sCoeff, out double Coeff); //double Coeff = double.Parse(sCoeff);
-
-            //        if (!Parsed)
-            //        {
-            //            b = null!;
-            //            return false;
-            //        }
-
-            //        Parsed &= double.TryParse(sExp, out double Exp); //double Exp = double.Parse(sExp);
-
-            //        string Var = Fx.Substring(start, end - start + 1);
-
-            //        if (!Parsed) 
-            //        {
-            //            IChunk? IChunkExp = null;
-            //            try
-            //            {
-            //                IChunkExp = SubChunk(sExp,Variables);
-            //            }
-            //            catch (Exception e)
-            //            {
-            //            }
-
-            //            if (IChunkExp != null)
-            //            {
-            //                b = new ChainChunk(1, new BaseChunk(Coeff, Var, 1), IChunkExp);
-            //                return true;
-            //            }
-            //            else
-            //            {
-            //                b = null!;
-            //                return false;
-            //            }
-            //        }
-
-
-
-            //        b = new BaseChunk(Coeff, Var, Exp);
-            //        return true;
-            //    }
-            //}
-
-
-            //var index = Fx.IndexOf('^');
-
-            //if (index == -1)
-            //{
-            //    b = null!;
-            //    return false;
-            //}
-
-            //string snCoeff = (index == 0) ? "1" : Fx.Substring(0, index);
-            //snCoeff = (snCoeff == "-") ? "-1" : snCoeff;
-            //string snExp = Fx.Substring(index+1, Fx.Length - (index+1));
-
-            //bool nParsed = double.TryParse(snCoeff, out double nCoeff); //double Coeff = double.Parse(sCoeff);
-
-            //if (!nParsed)
-            //{
-            //    b = null!;
-            //    return false;
-            //}
-
-            //nParsed &= double.TryParse(snExp, out double nExp); //double Exp = double.Parse(sExp);
-
-            //if (!nParsed)
-            //{
-            //    IChunk? IChunkExp = null;
-            //    try
-            //    {
-            //        IChunkExp = SubChunk(snExp, Variables);
-            //    }
-            //    catch (Exception e)
-            //    {
-            //    }
-
-            //    if (IChunkExp != null)
-            //    {
-            //        b = new ChainChunk(1, new BaseChunk(nCoeff, null, 1), IChunkExp);
-            //        return true;
-            //    }
-            //    else
-            //    {
-            //        b = null!;
-            //        return false;
-            //    }
-            //}
-
-            //b = new BaseChunk(nCoeff, null, nExp);
-            //return true;
-            #endregion
         }
     }
 }

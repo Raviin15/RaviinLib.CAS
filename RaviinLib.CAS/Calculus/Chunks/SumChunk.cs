@@ -103,46 +103,7 @@ namespace RaviinLib.CAS
                 .GroupBy(c => c, new IChunkComparerIgnoreCoeff())
                 .Select(g => { var Sum = g.Sum(c => c.Coeff); return new BaseChunk(Sum, ((BaseChunk)g.Key).Var, ((BaseChunk)g.Key).Exp); })
                 .Where(x => x.Coeff != 0);
-            #region Old
-            //var bdist = Base.GroupBy(c => c.Var).Select(c => c.GroupBy(c => c.Exp).Select(c => c.ToList()).ToList()).ToList();
-
-
-            //for (int i = 0; i < bdist.Count(); i++)
-            //{
-            //    for (int j = 0; j < bdist[i].Count(); j++)
-            //    {
-            //        if (bdist[i][j].Count == 1) continue;
-            //        for (int k = 0; k < bdist[i][j].Count(); k++)
-            //        {
-            //            var coeff = bdist[i][j].Select(c => c.Coeff).Sum();
-            //            var Var = bdist[i][j][0].Var;
-            //            if (coeff == 0) bdist[i][j] = new();
-            //            else bdist[i][j] = new() { new BaseChunk(coeff, Var, bdist[i][j][0].Exp) };
-            //        }
-            //    }
-            //}
-
-            //if (bdist.Count < Base.Count)
-            //{
-            //    List<List<BaseChunk>> blist = new List<List<BaseChunk>>();
-            //    foreach (var b in bdist)
-            //    {
-            //        blist.Add(Base.Where(c => c.Exp == b && c.Var != null).ToList());
-            //    }
-
-            //    for (int i = 0; i < blist.Count; i++)
-            //    {
-            //        var item = blist[i];
-            //        if (item.Count > 0)
-            //        {
-            //            blist[i] = new() { new BaseChunk(item.Select(c => c.Coeff).Sum(), item[0].Var, item[0].Exp) };
-            //        }
-            //    }
-            //    Base = blist.SelectMany(x => x).ToList();
-            //    //Base.Clear();
-            //    //blist.ForEach(b => Base.AddRange(b));
-            //}
-            #endregion
+            
             #endregion
 
             #region Chain
