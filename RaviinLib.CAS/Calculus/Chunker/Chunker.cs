@@ -112,9 +112,9 @@ namespace RaviinLib.CAS
 
             if (Variables == null || Variables.Count == 0) Variables = GetVariables(Fx);
 
+                return SubChunk(Fx, Variables);
             try
             {
-                return SubChunk(Fx, Variables);
             }
             catch (Exception e)
             {
@@ -251,35 +251,51 @@ namespace RaviinLib.CAS
             var f = CheckFuncChunk(Fx);
             if (f.IsFunc)
             {
-                double Exp = double.Parse(f.Substrings.Exp);
-                IChunk SecondChunk = (f.Substrings.SecondChunk == "") ? null : SubChunk(f.Substrings.SecondChunk, Variables);
-
-                if (double.TryParse(f.Substrings.Coeff, out double Coeff))
+                if (double.TryParse(f.Substrings.Exp,out double Exp))
                 {
-                    if (Exp != 1)
+                    IChunk SecondChunk = (f.Substrings.SecondChunk == "") ? null : SubChunk(f.Substrings.SecondChunk, Variables);
+
+                    if (double.TryParse(f.Substrings.Coeff, out double Coeff))
                     {
-                        return new ChainChunk(Coeff, new FuncChunk(SubChunk(f.Substrings.Chunk, Variables), f.Substrings.Func) { SecondChunk = SecondChunk }, new BaseChunk(Exp, null, 1));
-                    }
+                        if (Exp != 1)
+                        {
+                            return new ChainChunk(Coeff, new FuncChunk(SubChunk(f.Substrings.Chunk, Variables), f.Substrings.Func) { SecondChunk = SecondChunk }, new BaseChunk(Exp, null, 1));
+                        }
 
-                    return new FuncChunk(SubChunk(f.Substrings.Chunk, Variables), f.Substrings.Func, Coeff) { SecondChunk = SecondChunk };
-                }
-                else
-                {
-                    try
+                        return new FuncChunk(SubChunk(f.Substrings.Chunk, Variables), f.Substrings.Func, Coeff) { SecondChunk = SecondChunk };
+                    }
+                    else
                     {
                         IChunk ICoeff = SubChunk(f.Substrings.Coeff, Variables);
 
                         if (Exp != 1)
                         {
-                            return new ProductChunk(ICoeff,new ChainChunk(1, new FuncChunk(SubChunk(f.Substrings.Chunk, Variables), f.Substrings.Func) { SecondChunk = SecondChunk }, new BaseChunk(Exp, null, 1)));
+                            return new ProductChunk(ICoeff, new ChainChunk(1, new FuncChunk(SubChunk(f.Substrings.Chunk, Variables), f.Substrings.Func) { SecondChunk = SecondChunk }, new BaseChunk(Exp, null, 1)));
                         }
 
                         return new ProductChunk(ICoeff, new FuncChunk(SubChunk(f.Substrings.Chunk, Variables), f.Substrings.Func) { SecondChunk = SecondChunk });
-                    }
-                    catch (Exception)
-                    {
+                        
                     }
                 }
+                else
+                {
+                    IChunk IExp = SubChunk(f.Substrings.Exp, Variables);
+
+                    IChunk SecondChunk = (f.Substrings.SecondChunk == "") ? null : SubChunk(f.Substrings.SecondChunk, Variables);
+
+                    if (double.TryParse(f.Substrings.Coeff, out double Coeff))
+                    {
+                        return new ChainChunk(Coeff, new FuncChunk(SubChunk(f.Substrings.Chunk, Variables), f.Substrings.Func) { SecondChunk = SecondChunk }, IExp);
+                    }
+                    else
+                    {
+                        IChunk ICoeff = SubChunk(f.Substrings.Coeff, Variables);
+
+                        return new ProductChunk(ICoeff, new ChainChunk(1, new FuncChunk(SubChunk(f.Substrings.Chunk, Variables), f.Substrings.Func) { SecondChunk = SecondChunk }, IExp));
+                    }
+                }
+
+                
             }
 
             var c = CheckChainChunk(Fx);
