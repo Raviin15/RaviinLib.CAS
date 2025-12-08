@@ -562,6 +562,8 @@ namespace RaviinLib.CAS
                 {
                     Return.Exp = (0, 0);
                 }
+
+                if (CloseIndex + 1 != Chunk.Length && Chunk.Slice(CloseIndex,Chunk.Length - CloseIndex).IndexOf('^') == -1) throw new Exception($"Failed to parse {Chunk.ToString()}");
             }
 
             return (OpenIndex != CloseIndex, Return);
