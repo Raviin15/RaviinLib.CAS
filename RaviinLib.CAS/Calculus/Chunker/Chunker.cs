@@ -113,9 +113,9 @@ namespace RaviinLib.CAS
 
             if (Variables == null || Variables.Count == 0) Variables = GetVariables(Fx);
 
-                return SubChunk(Fx.AsSpan(), Variables);
             try
             {
+                return SubChunk(Fx.AsSpan(), Variables);
             }
             catch (Exception e)
             {
