@@ -1,7 +1,8 @@
 ﻿
 using System;
-using System.Linq;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace RaviinLib.CAS
 {
@@ -112,7 +113,7 @@ namespace RaviinLib.CAS
 
             if (Variables == null || Variables.Count == 0) Variables = GetVariables(Fx);
 
-                return SubChunk(Fx, Variables);
+                return SubChunk(Fx.AsSpan(), Variables);
             try
             {
             }
@@ -210,15 +211,17 @@ namespace RaviinLib.CAS
             return (Fx, Variables);
         }
 
-        private static IChunk SubChunk(string Fx, List<string> Variables)
+        private static IChunk SubChunk(ReadOnlySpan<char> Fx, List<string> Variables)
         {
             var s = CheckSumChunk(Fx);
             if (s.IsSum)
             {
-                List<IChunk> chunks = new List<IChunk>();
-                foreach (var SubString in s.Substrings)
+                List<IChunk> chunks = new List<IChunk>(s.Substrings.Count);
+
+                foreach (var (start, length) in s.Substrings)
                 {
-                    chunks.Add(SubChunk(SubString, Variables));
+                    var slice = Fx.Slice(start, length); // one alloc per term
+                    chunks.Add(SubChunk(slice, Variables));
                 }
                 return new SumChunk(chunks);
             }
@@ -226,23 +229,23 @@ namespace RaviinLib.CAS
             var p = CheckProdChunk(Fx);
             if (p.IsProd)
             {
-                List<IChunk> chunks = new List<IChunk>();
-                foreach (var SubString in p.Substrings)
+                var n = p.Substrings.Count;
+                if (n <= 1) throw new Exception("Failed");
+
+                var first = p.Substrings[0];
+                IChunk Prod = SubChunk(Fx.Slice(first.Start, first.Length), Variables);
+
+                for (int i = 1; i < n; i++)
                 {
-                    chunks.Add(SubChunk(SubString.Substring, Variables));
-                }
+                    var current = p.Substrings[i];
+                    var slice = Fx.Slice(current.Start, current.Length); // one alloc per term
+                    var chunk = SubChunk(slice, Variables);
 
-                if (chunks.Count == 1 || chunks.Count == 0) throw new Exception("Failed");
-
-                IChunk Prod = chunks[0];
-
-                for (int i = 1; i < chunks.Count; i++)
-                {
-                    if (p.Substrings[i - 1].IsNextQuotient == false)
+                    if (!p.Substrings[i-1].IsNextQuotient)
                     {
-                        Prod = new ProductChunk(Prod, chunks[i]);
+                        Prod = new ProductChunk(Prod, chunk);
                     }
-                    else Prod = new ProductChunk(Prod, new ChainChunk(1, chunks[i], new BaseChunk(-1, null, 1)));
+                    else Prod = new ProductChunk(Prod, new ChainChunk(1, chunk, new BaseChunk(-1, null, 1)));
                 }
 
                 return Prod;
@@ -251,47 +254,51 @@ namespace RaviinLib.CAS
             var f = CheckFuncChunk(Fx);
             if (f.IsFunc)
             {
-                if (double.TryParse(f.Substrings.Exp,out double Exp))
-                {
-                    IChunk SecondChunk = (f.Substrings.SecondChunk == "") ? null : SubChunk(f.Substrings.SecondChunk, Variables);
+                string coeffStr = Fx.Slice(f.Substrings.Coeff.Start, f.Substrings.Coeff.Length).ToString();
+                coeffStr = (coeffStr == "") ? "1" : (coeffStr == "-") ? "-1" : coeffStr;
 
-                    if (double.TryParse(f.Substrings.Coeff, out double Coeff))
+                string expStr = Fx.Slice(f.Substrings.Exp.Start, f.Substrings.Exp.Length).ToString();
+                expStr = (expStr == "") ? "1" : (expStr == "-") ? "-1" : expStr;
+
+                IChunk SecondChunk = (f.Substrings.SecondChunk.Start == 0 && f.Substrings.SecondChunk.Length == 0) ? null : SubChunk(Fx.Slice(f.Substrings.SecondChunk.Start, f.Substrings.SecondChunk.Length), Variables);
+
+                if (double.TryParse(expStr, out double Exp))
+                {
+                    if (double.TryParse(coeffStr, out double Coeff))
                     {
                         if (Exp != 1)
                         {
-                            return new ChainChunk(Coeff, new FuncChunk(SubChunk(f.Substrings.Chunk, Variables), f.Substrings.Func) { SecondChunk = SecondChunk }, new BaseChunk(Exp, null, 1));
+                            return new ChainChunk(Coeff, new FuncChunk(SubChunk(Fx.Slice(f.Substrings.Chunk.Start, f.Substrings.Chunk.Length), Variables), f.Substrings.Func) { SecondChunk = SecondChunk }, new BaseChunk(Exp, null, 1));
                         }
 
-                        return new FuncChunk(SubChunk(f.Substrings.Chunk, Variables), f.Substrings.Func, Coeff) { SecondChunk = SecondChunk };
+                        return new FuncChunk(SubChunk(Fx.Slice(f.Substrings.Chunk.Start, f.Substrings.Chunk.Length), Variables), f.Substrings.Func, Coeff) { SecondChunk = SecondChunk };
                     }
                     else
                     {
-                        IChunk ICoeff = SubChunk(f.Substrings.Coeff, Variables);
+                        IChunk ICoeff = SubChunk(coeffStr.AsSpan(), Variables);
 
                         if (Exp != 1)
                         {
-                            return new ProductChunk(ICoeff, new ChainChunk(1, new FuncChunk(SubChunk(f.Substrings.Chunk, Variables), f.Substrings.Func) { SecondChunk = SecondChunk }, new BaseChunk(Exp, null, 1)));
+                            return new ProductChunk(ICoeff, new ChainChunk(1, new FuncChunk(SubChunk(Fx.Slice(f.Substrings.Chunk.Start, f.Substrings.Chunk.Length), Variables), f.Substrings.Func) { SecondChunk = SecondChunk }, new BaseChunk(Exp, null, 1)));
                         }
 
-                        return new ProductChunk(ICoeff, new FuncChunk(SubChunk(f.Substrings.Chunk, Variables), f.Substrings.Func) { SecondChunk = SecondChunk });
+                        return new ProductChunk(ICoeff, new FuncChunk(SubChunk(Fx.Slice(f.Substrings.Chunk.Start, f.Substrings.Chunk.Length), Variables), f.Substrings.Func) { SecondChunk = SecondChunk });
                         
                     }
                 }
                 else
                 {
-                    IChunk IExp = SubChunk(f.Substrings.Exp, Variables);
-
-                    IChunk SecondChunk = (f.Substrings.SecondChunk == "") ? null : SubChunk(f.Substrings.SecondChunk, Variables);
-
-                    if (double.TryParse(f.Substrings.Coeff, out double Coeff))
+                    IChunk IExp = SubChunk(expStr.AsSpan(), Variables);
+                    
+                    if (double.TryParse(coeffStr, out double Coeff))
                     {
-                        return new ChainChunk(Coeff, new FuncChunk(SubChunk(f.Substrings.Chunk, Variables), f.Substrings.Func) { SecondChunk = SecondChunk }, IExp);
+                        return new ChainChunk(Coeff, new FuncChunk(SubChunk(Fx.Slice(f.Substrings.Chunk.Start, f.Substrings.Chunk.Length), Variables), f.Substrings.Func) { SecondChunk = SecondChunk }, IExp);
                     }
                     else
                     {
-                        IChunk ICoeff = SubChunk(f.Substrings.Coeff, Variables);
+                        IChunk ICoeff = SubChunk(coeffStr.AsSpan(), Variables);
 
-                        return new ProductChunk(ICoeff, new ChainChunk(1, new FuncChunk(SubChunk(f.Substrings.Chunk, Variables), f.Substrings.Func) { SecondChunk = SecondChunk }, IExp));
+                        return new ProductChunk(ICoeff, new ChainChunk(1, new FuncChunk(SubChunk(Fx.Slice(f.Substrings.Chunk.Start, f.Substrings.Chunk.Length), Variables), f.Substrings.Func) { SecondChunk = SecondChunk }, IExp));
                     }
                 }
 
@@ -301,21 +308,27 @@ namespace RaviinLib.CAS
             var c = CheckChainChunk(Fx);
             if (c.IsChain)
             {
-                if (double.TryParse(c.Substrings.Coeff, out double Coeff))
+                string coeffStr = Fx.Slice(c.Substrings.Coeff.Start, c.Substrings.Coeff.Length).ToString();
+                coeffStr = (coeffStr == "") ? "1" : (coeffStr == "-") ? "-1" : coeffStr;
+
+                string expStr = Fx.Slice(c.Substrings.Exp.Start, c.Substrings.Exp.Length).ToString();
+                expStr = (expStr == "") ? "1" : (expStr == "-") ? "-1" : expStr;
+
+                if (double.TryParse(coeffStr, out double Coeff))
                 {
-                    IChunk Exp = SubChunk(c.Substrings.Exp, Variables);
+                    IChunk Exp = SubChunk(expStr.AsSpan(), Variables);
                     //double Exp = double.Parse(c.Substrings.Exp);
 
-                    return new ChainChunk(Coeff, SubChunk(c.Substrings.Chunk, Variables), Exp);
+                    return new ChainChunk(Coeff, SubChunk(Fx.Slice(c.Substrings.Chunk.Start, c.Substrings.Chunk.Length), Variables), Exp);
                 }
                 else
                 {
                     try
                     {
-                        IChunk ICoeff = SubChunk(c.Substrings.Coeff, Variables);
-                        IChunk Exp = SubChunk(c.Substrings.Exp, Variables);
+                        IChunk ICoeff = SubChunk(coeffStr.AsSpan(), Variables);
+                        IChunk Exp = SubChunk(expStr.AsSpan(), Variables);
 
-                        return new ProductChunk(ICoeff,new ChainChunk(1, SubChunk(c.Substrings.Chunk, Variables), Exp));
+                        return new ProductChunk(ICoeff,new ChainChunk(1, SubChunk(Fx.Slice(c.Substrings.Chunk.Start, c.Substrings.Chunk.Length), Variables), Exp));
                     }
                     catch (Exception)
                     {
@@ -329,95 +342,122 @@ namespace RaviinLib.CAS
                 return b;
             }
 
-            if (double.TryParse(Fx, out _))
-            {
-                return new BaseChunk(double.Parse(Fx), null, 1);
-            }
-
-            throw new Exception($"Failed to parse \"{Fx}\"");
+            throw new Exception($"Failed to parse \"{Fx.ToString()}\"");
             //return new BaseChunk(0, null, 1);
         }
 
-        private static (bool IsSum, List<string> Substrings) CheckSumChunk(string Chunk)
+        private static (bool IsSum, List<(int Start, int Length)> Substrings) CheckSumChunk(ReadOnlySpan<char> Chunk)
         {
-            List<string> Substrings = new List<string>();
+            List<(int Start, int Length)> Substrings = new List<(int Start, int Length)>(4);
 
-            int LastPlus = 0;
-
+            int LastSign = 0;
             int skip = 0;
+
             for (int i = 0; i < Chunk.Length; i++)
             {
-                if (Chunk[i] == '+' && skip == 0)
-                {
-                    Substrings.Add(Chunk.Substring(LastPlus, i - LastPlus));
+                char c = Chunk[i];
 
-                    LastPlus = i + 1;
-                }
-                else if (Chunk[i] == '-' && skip == 0 && i != 0 && Chunk[i - 1] != '+' && Chunk[i - 1] != '^' && Chunk[i - 1] != '*' && Chunk[i - 1] != '/')
-                {
-                    Substrings.Add(Chunk.Substring(LastPlus, i - LastPlus));
+                if (Chunk[i] == '(') { skip++; continue; }
+                if (Chunk[i] == ')') { skip--; continue; }
 
-                    LastPlus = i;
+                if (skip == 0)
+                {
+
+                    if (c == '+')
+                    {
+                        Substrings.Add((LastSign, i - LastSign));
+
+                        LastSign = i + 1;
+                        continue;
+                    }
+
+                    if (c == '-' &&
+                        i != 0 && 
+                        Chunk[i - 1] != '+' && 
+                        Chunk[i - 1] != '^' && 
+                        Chunk[i - 1] != '*' && 
+                        Chunk[i - 1] != '/')
+                    {
+                        Substrings.Add((LastSign, i - LastSign));
+
+                        LastSign = i;
+                        continue;
+                    }
                 }
-                else if (Chunk[i] == '(') skip++;
-                else if (Chunk[i] == ')') skip--;
             }
 
             if (Substrings.Count > 0)
             {
-                Substrings.Add(Chunk.Substring(LastPlus, Chunk.Length - LastPlus));
+                Substrings.Add((LastSign, Chunk.Length - LastSign));
             }
 
             return (Substrings.Count > 0, Substrings);
         }
 
-        private static (bool IsProd, List<(string Substring, bool IsNextQuotient)> Substrings) CheckProdChunk(string Chunk)
+        private static (bool IsProd, List<(int Start, int Length, bool IsNextQuotient)> Substrings) CheckProdChunk(ReadOnlySpan<char> Chunk)
         {
-            List<(string, bool)> Substrings = new List<(string, bool)>();
+            List<(int Start, int Length, bool IsNextQuotient)> Substrings = new List<(int Start, int Length, bool IsNextQuotient)>(4);
 
-            int LastPlus = -1;
+            int LastSign = 0;
 
             int skip = 0;
+
             for (int i = 0; i < Chunk.Length; i++)
             {
-                if (Chunk[i] == '*' && skip == 0)
-                {
-                    Substrings.Add((Chunk.Substring(LastPlus + 1, i - LastPlus - 1), false));
+                char c = Chunk[i];
 
-                    LastPlus = i;
-                }
-                else if (Chunk[i] == '/' && skip == 0)
-                {
-                    Substrings.Add((Chunk.Substring(LastPlus + 1, i - LastPlus - 1), true));
+                if (c == '(') { skip++; continue; }
+                if (c == ')') { skip--; continue; }
 
-                    LastPlus = i;
+                if (skip == 0)
+                {
+                    if (c == '*')
+                    {
+                        Substrings.Add((LastSign, i - LastSign, false));
+
+                        LastSign = i + 1;
+                        continue;
+                    }
+
+                    if (c == '/')
+                    {
+                        Substrings.Add((LastSign, i - LastSign, true));
+
+                        LastSign = i + 1;
+                        continue;
+
+                    }
                 }
-                else if (Chunk[i] == '(') skip++;
-                else if (Chunk[i] == ')') skip--;
+                
             }
 
             if (Substrings.Count > 0)
             {
-                Substrings.Add((Chunk.Substring(LastPlus + 1, Chunk.Length - LastPlus - 1), false));
-                if (Substrings.Last().Item1 == "")
-                {
-
-                }
+                Substrings.Add((LastSign, Chunk.Length - LastSign, false));
             }
 
             return (Substrings.Count > 0, Substrings);
         }
 
-        private static (bool IsFunc, (string Coeff, string Chunk, string SecondChunk, string Exp, Functions Func) Substrings) CheckFuncChunk(string Chunk)
+        private static 
+            (
+                bool IsFunc, 
+                (
+                    (int Start, int Length) Coeff, 
+                    (int Start, int Length) Chunk, 
+                    (int Start, int Length) SecondChunk, 
+                    (int Start, int Length) Exp, 
+                    Functions Func
+                ) Substrings 
+            ) CheckFuncChunk(ReadOnlySpan<char> Chunk)
         {
-            List<string> Substrings = new List<string>();
 
             int OpenIndex = Chunk.IndexOf('(');
-            if (OpenIndex <= 0 || !FunctionChars.Contains(Chunk[OpenIndex - 1])) return (false, (null,null,null,null,Functions.Abs));
+            if (OpenIndex <= 0 || !FunctionChars.Contains(Chunk[OpenIndex - 1])) 
+                return (false, ((0,0), (0, 0), (0, 0), (0, 0), Functions.Abs));
+
 
             int CloseIndex = OpenIndex;
-
-
             int skip = 0;
             for (int i = OpenIndex; i < Chunk.Length; i++)
             {
@@ -433,39 +473,53 @@ namespace RaviinLib.CAS
                 }
             }
 
-            (string Coeff, string Chunk, string SecondChunk, string Exp, Functions Func) Return = (null,null,null,null,Functions.Abs);
+            ((int Start, int Length) Coeff, (int Start, int Length) Chunk, (int Start, int Length) SecondChunk, (int Start, int Length) Exp, Functions Func) Return = (((0, 0), (0, 0), (0, 0), (0, 0), Functions.Abs));
 
             if (OpenIndex != CloseIndex)
             {
-                Return.Coeff = (OpenIndex == 1) ? "1" : Chunk.Substring(0, OpenIndex - 1);
-                Return.Coeff = (Return.Coeff == "-") ? "-1" : Return.Coeff;
+                // Coeff
+                int coeffStart = 0;
+                int coeffLength = OpenIndex-1;
+                if (coeffLength < 0) coeffLength = 0; // default to ""
+                Return.Coeff = (coeffStart, coeffLength);
+
+                //Function
                 Return.Func = (Functions)Chunk[OpenIndex - 1];
 
+                //Chunk
+                Return.Chunk = (OpenIndex + 1, CloseIndex - (OpenIndex + 1));
 
-                Return.Chunk = Chunk.Substring(OpenIndex + 1, CloseIndex - (OpenIndex + 1));
-                if (Return.Chunk.Contains(','))
+                //Second Chunk
+                var CommaIndex = Chunk.Slice(Return.Chunk.Start, Return.Chunk.Length).IndexOf(',');
+                if (CommaIndex >= 0)
                 {
-                    var Halfs = Return.Chunk.Split(',');
-                    Return.Chunk = Halfs[0];
-                    Return.SecondChunk = Halfs[1];
+                    Return.SecondChunk = (Return.Chunk.Start + CommaIndex + 1, Return.Chunk.Length - CommaIndex - 1);
+                    Return.Chunk = (Return.Chunk.Start, CommaIndex);
                 }
                 else
                 {
-                    Return.SecondChunk = "";
+                    Return.SecondChunk = (0, 0);
                 }
 
-                Return.Exp = (CloseIndex + 2 >= Chunk.Length) ? "1" : Chunk.Substring(CloseIndex + 2, (Chunk.Length - 1) - (CloseIndex + 1));
+                //Exp
+                int expStart = CloseIndex + 2;
+                if (expStart < Chunk.Length)
+                {
+                    Return.Exp = (expStart, Chunk.Length - expStart);
+                }
+                else
+                {
+                    Return.Exp = (0, 0);
+                }
             }
 
             return (OpenIndex != CloseIndex, Return);
         }
 
-        private static (bool IsChain, (string Coeff, string Chunk, string Exp) Substrings) CheckChainChunk(string Chunk)
+        private static (bool IsChain, ((int Start, int Length) Coeff, (int Start, int Length) Chunk, (int Start, int Length) Exp) Substrings) CheckChainChunk(ReadOnlySpan<char> Chunk)
         {
-            List<string> Substrings = new List<string>();
-
             int OpenIndex = Chunk.IndexOf('(');
-            if (OpenIndex == -1) return (false, (null,null,null));
+            if (OpenIndex == -1) return (false, ((0,0), (0, 0), (0, 0)));
 
             int CloseIndex = OpenIndex;
 
@@ -485,169 +539,161 @@ namespace RaviinLib.CAS
                 }
             }
 
-            (string Coeff, string Chunk, string Exp) Return = (null,null,null);
+            ((int Start, int Length) Coeff, (int Start, int Length) Chunk, (int Start, int Length) Exp) Return = ((0, 0), (0, 0), (0, 0));
 
             if (OpenIndex != CloseIndex)
             {
-                Return.Coeff = (OpenIndex == 0) ? "1" : Chunk.Substring(0, OpenIndex);
-                Return.Coeff = (Return.Coeff == "-") ? "-1" : Return.Coeff;
-                Return.Chunk = Chunk.Substring(OpenIndex + 1, CloseIndex - (OpenIndex + 1));
-                Return.Exp = (CloseIndex == Chunk.Length - 1) ? "1" : Chunk.Substring(CloseIndex + 2, (Chunk.Length - 1) - (CloseIndex + 1));
+                // Coeff
+                int coeffStart = 0;
+                int coeffLength = OpenIndex;
+                if (coeffLength < 0) coeffLength = 0; // default to ""
+                Return.Coeff = (coeffStart, coeffLength);
 
-                if (Return.Coeff == "") //!double.TryParse(Return.Coeff, out _)
-                {
-                    Return.Coeff = "1";
-                }
-                if (Return.Exp == "") //!double.TryParse(Return.Exp, out _)
-                {
-                    Return.Exp = "1";
-                }
+                //Chunk
+                Return.Chunk = (OpenIndex + 1, CloseIndex - (OpenIndex + 1));
 
+                //Exp
+                int expStart = CloseIndex + 2;
+                if (expStart < Chunk.Length)
+                {
+                    Return.Exp = (expStart, Chunk.Length - expStart);
+                }
+                else
+                {
+                    Return.Exp = (0, 0);
+                }
             }
 
             return (OpenIndex != CloseIndex, Return);
         }
 
-        private static bool IsNumber(char c)
-        {
-            return (c == '0' || c == '1' || c == '2' || c == '3' || c == '4' || c == '5' || c == '6' || c == '7' || c == '8' || c == '9');
-        }
-        public static bool TryParseBaseChunk(string Fx, List<string> Variables, out IChunk b)
+        public static bool TryParseBaseChunk(ReadOnlySpan<char> Fx, List<string> Variables, out IChunk b)
         {
             b = null;
 
-            int varIndex = -1;//Variables.Select(c => Fx.IndexOf(c)).Where(c => c != -1);
-
-            foreach (var var in Variables)
+            // Find first variable index
+            int varIndex = -1; //Variables.Select(c => Fx.IndexOf(c)).Where(c => c != -1);
+            ReadOnlySpan<char> firstVar = null;
+            for (int i = 0; i < Variables.Count; i++)
             {
-                var ind = Fx.IndexOf(var);
-                if (ind != -1 && ind < varIndex) { varIndex = ind; continue; }
-                if (ind != -1 && varIndex == -1) varIndex = ind;
+                var v = Variables[i].AsSpan();
+                int ind = Fx.IndexOf(v);
+                if (ind != -1 && (varIndex == -1 || ind < varIndex))
+                {
+                    varIndex = ind;
+                    firstVar = v;
+                }
             }
 
-            //for (int i = 0; i < Fx.Length; i++)
-            //{
-            //    if (!DissalowedVarChars.Contains(Fx[i]))
-            //    {
-            //        int start = i;
-            //        int end = i;
 
-            //        var wasd1 = !DissalowedVarCharsExcludingNumbers.Contains(Fx[end + 1]);
-            //        var subst = Fx.Substring(start, end - start + 1);
-            //        var wasd2 = (!Variables.Contains(subst));
-
-            //        while (end + 1 != Fx.Length && (wasd1 && wasd2) ) // || !Variables.Contains($"{Fx[end]}")
-            //        {
-
-
-            //            i++;
-            //            end++;
-
-            //            var p = end + 1 != Fx.Length;
-            //            var y = !Variables.Contains(Fx.Substring(start, end - start + 1));
-            //            var z = !Variables.Contains($"{Fx[end]}");
-            //        }
-
-            //        varIndexs.Add(start);
-            //        //string Var = Fx.Substring(start, end - start + 1);
-            //    }
-            //}
-
-
-            if (Variables.Contains(Fx)) 
-            { 
-                b = new BaseChunk(Fx);
+            // Fx = x
+            if (firstVar != null && Fx.SequenceEqual(firstVar))
+            {
+                b = new BaseChunk(Fx.ToString());
                 return true;
             }
 
-            //bool ContainsVariable = varIndexs.Count() > 0;
-            bool ContainsVariable = varIndex != -1;
             var powIndex = Fx.IndexOf('^');
 
             if (powIndex != -1)
             {
-                var split = Fx.Split('^');
-                if (split.Length == 2 && Variables.Contains(Fx))
-                {
-                    b = new BaseChunk(1,split[0], double.Parse(split[1]));
-                    return true;
-                }
-            }
+                ReadOnlySpan<char> left = Fx.Slice(0, powIndex);
+                ReadOnlySpan<char> right = Fx.Slice(powIndex + 1);
 
-            if (powIndex != -1) // a^() or ax^()
-            {
-                if (double.TryParse(Fx.Substring(0, powIndex), out double Num)) //2^2 or 2^()
+                if (double.TryParse(left.ToString(),out double numCoeff))
                 {
-                    if (double.TryParse(Fx.Substring(powIndex + 1), out double NumExp)) //2^2
+                    if (double.TryParse(right.ToString(), out double numExp))
                     {
-                        b = new BaseChunk(Num, null, NumExp);
+                        // a^b
+                        b = new BaseChunk(numCoeff, null, numExp);
                         return true;
                     }
-                    else // 2^()
+                    else
                     {
+                        // a^()
                         try
                         {
-                            IChunk IChunkExp = SubChunk(Fx.Substring(powIndex + 1), Variables);
-                            b = new ChainChunk(1, new BaseChunk(Num, null, 1), IChunkExp);
+                            IChunk expChunk = SubChunk(right, Variables);
+                            b = new ChainChunk(1, new BaseChunk(numCoeff, null, 1), expChunk);
                             return true;
                         }
-                        catch (Exception)
+                        catch
                         {
+                            return false;
                         }
                     }
                 }
-                else //x^b or ax^b or ax^() or x^()
                 {
-                    //int varStartIndex = varIndexs.OrderBy(c => c).First();
-                    int varStartIndex = varIndex;
-                    string var = Fx.Substring(varStartIndex, powIndex - varStartIndex);
-                    string coeff = Fx.Substring(0, varStartIndex);
-                    coeff = (coeff == "") ? "1" : (coeff == "-") ? "-1" : coeff;
+                    // Left contains variable(s)
 
-                    if (double.TryParse(coeff, out double NumCoeff)) //Has Valid Coeff
+                    if (varIndex == -1)
+                        return false; // can't parse
+
+                    ReadOnlySpan<char> coeffSpan = Fx.Slice(0, varIndex);
+                    string varName = Fx.Slice(varIndex, powIndex - varIndex).ToString();
+                    double coeff = 1;
+
+                    if (coeffSpan.Length > 0)
                     {
-                        if (double.TryParse(Fx.Substring(powIndex + 1), out double NumExp)) //x^b or ax^b
+                        string coeffStr = coeffSpan.SequenceEqual("-".AsSpan()) ? "-1" : coeffSpan.ToString();
+                        if (!double.TryParse(coeffStr, out coeff))
+                            return false;
+                    }
+
+
+                    if (double.TryParse(right.ToString(), out double numExp))
+                    {
+                        // ()^b
+                        b = new BaseChunk(coeff, varName, numExp);
+                        return true;
+                    }
+                    else
+                    {
+                        // ()^()
+                        try
                         {
-                            b = new BaseChunk(NumCoeff, var, NumExp);
+                            IChunk expChunk = SubChunk(right, Variables);
+                            b = new ChainChunk(1, new BaseChunk(coeff, varName, 1), expChunk);
                             return true;
                         }
-                        else // ax^() or x^()
+                        catch
                         {
-                            try
-                            {
-                                IChunk IChunkExp = SubChunk(Fx.Substring(powIndex + 1), Variables);
-                                b = new ChainChunk(1, new BaseChunk(NumCoeff, var, 1), IChunkExp);
-                                return true;
-                            }
-                            catch (Exception)
-                            {
-                            }
+                            return false;
                         }
                     }
+
                 }
-
-
             }
-            else if (powIndex == -1) //a or ax
+
+
+            if  (varIndex == -1)
             {
-                if (!ContainsVariable && double.TryParse(Fx, out double Num)) //2
+                // a
+                if (double.TryParse(Fx.ToString(), out double num))
                 {
-                    b = new BaseChunk(Num, null, 1);
-                    return true;
-                }
-                else if (varIndex == 0) //x
-                {
-                    b = new BaseChunk(1, Fx, 1);
-                    return true;
-                }
-                else if (double.TryParse((Fx.Substring(0, varIndex) == "-") ? "-1" : Fx.Substring(0, varIndex), out Num))//2x
-                {
-                    b = new BaseChunk(Num, Fx.Substring(varIndex), 1);
+                    b = new BaseChunk(num, null, 1);
                     return true;
                 }
             }
+            else if (varIndex == 0)
+            {
+                // x
+                b = new BaseChunk(1, Fx.ToString(), 1);
+                return true;
+            }
+            else
+            {
+                // ax
+                ReadOnlySpan<char> coeffSpan = Fx.Slice(0, varIndex);
+                double coeff = 1;
+                if (!double.TryParse(coeffSpan.SequenceEqual("-".AsSpan()) ? "-1" : coeffSpan.ToString(), out coeff))
+                    return false;
 
-            b = null;
+                string varName = Fx.Slice(varIndex).ToString();
+                b = new BaseChunk(coeff, varName, 1);
+                return true;
+            }
+
             return false;
         }
     }

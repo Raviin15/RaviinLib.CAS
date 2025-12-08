@@ -20,7 +20,8 @@
   <ItemGroup>
     <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
     <PackageReference Include="Microsoft.Bcl.HashCode" Version="6.0.0" />
-	 <None Include="..\README.md" Pack="true" PackagePath="\"/>
+    <PackageReference Include="System.Memory" Version="4.6.3" />
+	 <None Include="..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>

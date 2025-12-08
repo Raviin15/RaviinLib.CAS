@@ -211,6 +211,12 @@ namespace RaviinLib.CAS
                     if (isOne) return new ChainChunk(1, Chunk.Copy(), new BaseChunk(-1, null, 1)) { Coeff = Coeff };
                     return new ProductChunk(ChunkDeriv, new ChainChunk(1, Chunk.Copy(), new BaseChunk(-1, null, 1))) { Coeff = Coeff };
                 case Functions.log:
+                    if (SecondChunk != null)
+                    {
+                        if (isOne) return new ChainChunk(1, new ProductChunk(Copy(), new FuncChunk(SecondChunk, Functions.ln)), new BaseChunk(-1, null, 1)) { Coeff = Coeff };
+                        return new ProductChunk(ChunkDeriv, new ChainChunk(1, new ProductChunk(Copy(), new FuncChunk(SecondChunk, Functions.ln)), new BaseChunk(-1, null, 1))) { Coeff = Coeff };
+                    }
+
                     if (isOne) return new ChainChunk(1, new ProductChunk(Copy(), new FuncChunk(new BaseChunk(10, null, 1), Functions.ln)), new BaseChunk(-1, null, 1)) { Coeff = Coeff };
                     return new ProductChunk(ChunkDeriv, new ChainChunk(1, new ProductChunk(Copy(), new FuncChunk(new BaseChunk(10, null, 1), Functions.ln)), new BaseChunk(-1, null, 1))) { Coeff = Coeff };
 
@@ -354,6 +360,7 @@ namespace RaviinLib.CAS
                 case Functions.ln:
                     return Math.Log(Chunk.Subs(Values)) * Coeff;
                 case Functions.log:
+                    if (SecondChunk != null) return Math.Log(Chunk.Subs(Values), SecondChunk.Subs(Values)) * Coeff;                    
                     return Math.Log10(Chunk.Subs(Values)) * Coeff;
 
                 case Functions.sqrt:
