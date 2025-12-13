@@ -28,10 +28,6 @@ namespace RaviinLib.CAS
                 string charEquiv = new string(FunctionChars[i], 1);
                 Function = Function.Replace(FunctionStrings[i] + '(', charEquiv + '(');
             }
-            Function = Function.Replace("π", Math.PI.ToString());
-            //Function = Function.Replace("e", Math.E.ToString());
-            Function = Function.Replace("E-", "*10^-");
-            Function = Function.Replace("E+", "*10^");
             #endregion
 
             List<string> Variables = new List<string>();
@@ -105,10 +101,6 @@ namespace RaviinLib.CAS
                 string charEquiv = new string(FunctionChars[i], 1);
                 Fx = Fx.Replace(FunctionStrings[i] + '(', charEquiv + '(');
             }
-            Fx = Fx.Replace("π", Math.PI.ToString());
-            //Fx = Fx.Replace("e", Math.E.ToString());
-            Fx = Fx.Replace("E-", "*10^-");
-            Fx = Fx.Replace("E+", "*10^");
             #endregion
 
             if (Variables == null || Variables.Count == 0) Variables = GetVariables(Fx);
@@ -356,6 +348,9 @@ namespace RaviinLib.CAS
             for (int i = 0; i < Chunk.Length; i++)
             {
                 char c = Chunk[i];
+                char cPrev;
+                if (i == 0) cPrev = ' ';
+                else cPrev = Chunk[i - 1];
 
                 if (Chunk[i] == '(') { skip++; continue; }
                 if (Chunk[i] == ')') { skip--; continue; }
@@ -363,7 +358,7 @@ namespace RaviinLib.CAS
                 if (skip == 0)
                 {
 
-                    if (c == '+')
+                    if (c == '+' && cPrev != 'E')
                     {
                         Substrings.Add((LastSign, i - LastSign));
 
@@ -373,10 +368,11 @@ namespace RaviinLib.CAS
 
                     if (c == '-' &&
                         i != 0 && 
-                        Chunk[i - 1] != '+' && 
-                        Chunk[i - 1] != '^' && 
-                        Chunk[i - 1] != '*' && 
-                        Chunk[i - 1] != '/')
+                        cPrev != '+' && 
+                        cPrev != '^' && 
+                        cPrev != '*' &&
+                        cPrev != '/' &&
+                        cPrev != 'E')
                     {
                         Substrings.Add((LastSign, i - LastSign));
 
