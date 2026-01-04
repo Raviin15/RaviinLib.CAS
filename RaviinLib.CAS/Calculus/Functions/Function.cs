@@ -43,13 +43,24 @@ namespace RaviinLib.CAS
                 _Latex = null;
             }
         }
-        /// <summary>
-        /// Gets the list of variables included in the function.
-        /// </summary>
-        public List<string> Variables { get; set; }
+        
         #endregion
 
         #region Cached Parameters
+
+        public List<string> _Variables = null;
+        /// <summary>
+        /// Gets the list of variables included in the function.
+        /// </summary>
+        public List<string> Variables
+        {
+            get
+            {
+                if (_Variables == null) _Variables = this.GetVariables();
+                return _Variables;
+            }
+        }
+
         private Function[] _Gradiant = null;
         /// <summary>
         /// Gets the gradient of the function with respect to its variables.
@@ -154,20 +165,20 @@ namespace RaviinLib.CAS
         #endregion
 
         #region Constructors
-        public Function(string Fx, List<string> Variables = null)
+        public Function(string Fx)
         {
-            if (Variables == null || Variables.Count == 0) Variables = GetVariables(Fx);
-
-            IFunction = Chunckify(Fx) ?? new BaseChunk(0, null, 1);
-            this.Variables = Variables;
+            IFunction = Chunckify(Fx);
         }
-        public Function(IChunk Fx, List<string> Variables = null)
+        public Function(IChunk Fx)
         {
-            if (Variables == null || Variables.Count == 0) Variables = GetVariables(Fx.ToString());
-
             IFunction = Fx;
-            this.Variables = Variables;
         }
+
+        [Obsolete("No longer need/allow passing in a Variable list.", true)]
+        public Function(string Fx, List<string> Variables) : this(Fx) { }
+
+        [Obsolete("No longer need/allow passing in a Variable list.", true)]
+        public Function(IChunk Fx, List<string> Variables) : this(Fx) { }
         #endregion
 
         #region Derivative
@@ -177,9 +188,9 @@ namespace RaviinLib.CAS
         /// <param name="Var">The variable with respect to which the derivative is calculated.</param>
         /// <returns>A new <see cref="Function"/> representing the derivative of the current function with respect to the
         /// specified variable.</returns>
-        public virtual Function Derivative(string Var)
+        public Function Derivative(string Var)
         {
-            return new Function(IFunction.Derivative(Var), Variables);
+            return new Function(IFunction.Derivative(Var));
         }
 
         /// <summary>
@@ -187,19 +198,19 @@ namespace RaviinLib.CAS
         /// </summary>
         /// <param name="Variables">Defaults to this.Variables</param>
         /// <returns>The gradiant of the function. In the form of Function[]</returns>
-        public virtual Function[] GetGradiant(List<string> Variables = null)
+        public Function[] GetGradiant(List<string> Variables = null)
         {
             if (Variables == null) Variables = this.Variables;
 
             List<Function> Funcs = new List<Function>() { Capacity = Variables.Count };
             foreach (var Var in Variables)
             {
-                Funcs.Add(new Function(IFunction.Derivative(Var), Variables));
+                Funcs.Add(new Function(IFunction.Derivative(Var)));
             }
             return Funcs.ToArray();
         }
 
-        public virtual Function[][] GetHessian()
+        public Function[][] GetHessian()
         {
             return GetGradiant().Select(F => F.GetGradiant()).ToArray();
         }
@@ -209,7 +220,7 @@ namespace RaviinLib.CAS
 
         public Function GetAntiderivative(string Var)
         {
-            return new Function(IFunction.Antiderivative(Var), Variables);
+            return new Function(IFunction.Antiderivative(Var));
         }
 
         #endregion
@@ -217,12 +228,21 @@ namespace RaviinLib.CAS
         #region Misc Methods
 
         /// <summary>
+        /// Gets a list of all variables in the function.
+        /// </summary>
+        /// <returns>A list of strings containing all variables. The list is empty if no variables exist.</returns>
+        public List<string> GetVariables()
+        {
+            return IFunction.GetVariables();
+        }
+
+        /// <summary>
         /// Creates a new <see cref="Function"/> instance that is a copy of the current instance.
         /// </summary>
         /// <returns>A new <see cref="Function"/> object that contains the same internal state as the current instance.</returns>
         public Function Copy()
         {
-            return new Function(IFunction.Copy(), new List<string>(Variables));
+            return new Function(IFunction.Copy());
         }
 
         /// <summary>
@@ -231,7 +251,7 @@ namespace RaviinLib.CAS
         /// <returns>A new <see cref="Function"/> instance representing the expanded form of the current function.</returns>
         public Function GetExpanded()
         {
-            return new Function(IFunction.Expanded(), new List<string>(Variables));
+            return new Function(IFunction.Expanded());
         }
 
         /// <summary>
@@ -415,10 +435,10 @@ namespace RaviinLib.CAS
                 }
                 Variables.AddRange(LocalVariables);
                 SeparationAproxs.Add(new SumChunk(BaseChunks));
-                OrigVarEquivilents[SepIFunc.Variables.First()] = new Function(OrigVarEquivilent.Remove(0, 2), LocalVariables);
+                OrigVarEquivilents[SepIFunc.Variables.First()] = new Function(OrigVarEquivilent.Remove(0, 2));
             }
 
-            return (new Function(new SumChunk(SeparationAproxs), Variables), OrigVarEquivilents);
+            return (new Function(new SumChunk(SeparationAproxs)), OrigVarEquivilents);
         }
 
         /// <summary>
@@ -438,7 +458,7 @@ namespace RaviinLib.CAS
 
                 foreach (var c in s.Chunks)
                 {
-                    var Var = GetVariables(c.ToString());
+                    var Var = Chunckify(c.ToString()).GetVariables();
 
                     if (Var.Count > 1) throw new Exception("Function is not separable.");
 
@@ -449,7 +469,7 @@ namespace RaviinLib.CAS
                     DistincVariables[Key].Add(c);
                 }
 
-                return DistincVariables.Select(c => new Function(new SumChunk(c.Value), (c.Key == null) ? new List<string>() : new List<string>() { c.Key })).ToArray();
+                return DistincVariables.Select(c => new Function(new SumChunk(c.Value))).ToArray();
             }
             else if (IFunction is ProductChunk p)
             {
@@ -497,6 +517,8 @@ namespace RaviinLib.CAS
         {
             return Subs(GetDict(new double[] { Val }));
         }
+
+        [Obsolete("No longer recommended/supported as order of variables can be unknown.")]
         public double Subs(IEnumerable<double> Vals)
         {
             return Subs(GetDict(Vals));
@@ -513,6 +535,7 @@ namespace RaviinLib.CAS
         {
             return SubsGrad(GetDict(new double[] { Val }));
         }
+        [Obsolete("No longer recommended/supported as order of variables can be unknown.")]
         public double[] SubsGrad(IEnumerable<double> Vals)
         {
             var Dict = GetDict(Vals);
@@ -537,6 +560,7 @@ namespace RaviinLib.CAS
         {
             return SubsHess(GetDict(new double[] { Val }));
         }
+        [Obsolete("No longer recommended/supported as order of variables can be unknown.")]
         public double[][] SubsHess(IEnumerable<double> Vals)
         {
             var Dict = GetDict(Vals);
@@ -595,6 +619,8 @@ namespace RaviinLib.CAS
         {
             return Replace(new Dictionary<string, IChunk>() { { Variable, Val.IFunction } });
         }
+
+        [Obsolete("No longer recommended/supported as order of variables can be unknown.")]
         public Function Replace(IEnumerable<Function> Vals)
         {
             return Replace(GetDict(Vals));
@@ -606,12 +632,14 @@ namespace RaviinLib.CAS
         public Function Replace(Dictionary<string, IChunk> Vals)
         {
             var Chunk = IFunction.Replace(Vals);
-            return new Function(Chunk, Chunk.GetVariables());
+            return new Function(Chunk);
         }
         public Function[] ReplaceGrad(string Variable, Function Val)
         {
             return ReplaceGrad(new Dictionary<string, IChunk>() { { Variable, Val.IFunction } });
         }
+
+        [Obsolete("No longer recommended/supported as order of variables can be unknown.")]
         public Function[] ReplaceGrad(IEnumerable<Function> Vals)
         {
             var Dict = GetDict(Vals);
@@ -636,6 +664,8 @@ namespace RaviinLib.CAS
         {
             return ReplaceHess(new Dictionary<string, IChunk>() { { Variable, Val.IFunction } });
         }
+
+        [Obsolete("No longer recommended/supported as order of variables can be unknown.")]
         public Function[][] ReplaceHess(IEnumerable<Function> Vals)
         {
             var Dict = GetDict(Vals);
@@ -672,7 +702,7 @@ namespace RaviinLib.CAS
         /// Recalculates and returns a simplified version of this function without modifying the original function.
         /// </summary>
         /// <returns>The simplified function.</returns>
-        public Function GetSimplified() => new Function(IFunction.Simplified() ?? new BaseChunk(0, null, 1), new List<string>(Variables));
+        public Function GetSimplified() => new Function(IFunction.Simplified() ?? new BaseChunk(0, null, 1));
         #endregion
 
         #region Overides
@@ -711,30 +741,21 @@ namespace RaviinLib.CAS
         #region Function,Function
         public static Function operator *(Function a, Function b)
         {
-            List<string> NewVars = new List<string>(a.Variables);
-            NewVars.AddRange(b.Variables);
-            return new Function(new ProductChunk(a.IFunction.Copy(), b.IFunction.Copy()), NewVars.Distinct().ToList());
+            return new Function(new ProductChunk(a.IFunction.Copy(), b.IFunction.Copy()));
         }
         public static Function operator /(Function a, Function b)
         {
-            List<string> NewVars = new List<string>(a.Variables);
-            NewVars.AddRange(b.Variables);
-            return new Function(new ProductChunk(a.IFunction.Copy(), new ChainChunk(1,b.IFunction.Copy(), new BaseChunk(-1,null,1))), NewVars.Distinct().ToList());
+            return new Function(new ProductChunk(a.IFunction.Copy(), new ChainChunk(1,b.IFunction.Copy(), new BaseChunk(-1,null,1))));
         }
         public static Function operator +(Function a, Function b)
         {
-            List<string> NewVars = new List<string>(a.Variables);
-            NewVars.AddRange(b.Variables);
-            return new Function(new SumChunk(new List<IChunk>() { a.IFunction.Copy(), b.IFunction.Copy() }), NewVars.Distinct().ToList());
+            return new Function(new SumChunk(new List<IChunk>() { a.IFunction.Copy(), b.IFunction.Copy() }));
         }
         public static Function operator -(Function a, Function b)
         {
-            List<string> NewVars = new List<string>(a.Variables);
-            NewVars.AddRange(b.Variables);
-
             var bcopy = b.IFunction.Copy();
             bcopy.Coeff *= -1;
-            return new Function(new SumChunk(new List<IChunk>() { a.IFunction.Copy(), bcopy }), NewVars.Distinct().ToList());
+            return new Function(new SumChunk(new List<IChunk>() { a.IFunction.Copy(), bcopy }));
         }
         #endregion
 
@@ -744,21 +765,21 @@ namespace RaviinLib.CAS
             var bcopy = b.IFunction.Copy();
             bcopy.Coeff *= a;
 
-            return new Function(bcopy, new List<string>(b.Variables));
+            return new Function(bcopy);
         }
         public static Function operator /(double a, Function b)
         {
-            return new Function(new ProductChunk(new BaseChunk(a,null,1),new ChainChunk(1, b.IFunction.Copy(), new BaseChunk(-1, null, 1))), new List<string>(b.Variables));
+            return new Function(new ProductChunk(new BaseChunk(a,null,1),new ChainChunk(1, b.IFunction.Copy(), new BaseChunk(-1, null, 1))));
         }
         public static Function operator +(double a, Function b)
         {
-            return new Function(new SumChunk(new List<IChunk>() { new BaseChunk(a, null, 1), b.IFunction.Copy() }), new List<string>(b.Variables));
+            return new Function(new SumChunk(new List<IChunk>() { new BaseChunk(a, null, 1), b.IFunction.Copy() }));
         }
         public static Function operator -(double a, Function b)
         {
             var bcopy = b.IFunction.Copy();
             bcopy.Coeff *= -1;
-            return new Function(new SumChunk(new List<IChunk>() { new BaseChunk(a, null, 1), bcopy }), new List<string>(b.Variables));
+            return new Function(new SumChunk(new List<IChunk>() { new BaseChunk(a, null, 1), bcopy }));
         }
         #endregion
 
@@ -768,26 +789,26 @@ namespace RaviinLib.CAS
             var acopy = a.IFunction.Copy();
             acopy.Coeff *= b;
 
-            return new Function(acopy, new List<string>(a.Variables));
+            return new Function(acopy);
         }
         public static Function operator /(Function a, double b)
         {
             var acopy = a.IFunction.Copy();
             acopy.Coeff /= b;
 
-            return new Function(acopy, new List<string>(a.Variables));
+            return new Function(acopy);
         }
         public static Function operator +(Function a, double b)
         {
-            return new Function(new SumChunk(new List<IChunk>() { new BaseChunk(b, null, 1), a.IFunction.Copy() }), new List<string>(a.Variables));
+            return new Function(new SumChunk(new List<IChunk>() { new BaseChunk(b, null, 1), a.IFunction.Copy() }));
         }
         public static Function operator -(Function a, double b)
         {
-            return new Function(new SumChunk(new List<IChunk>() { new BaseChunk(-b, null, 1), a.IFunction.Copy() }), new List<string>(a.Variables));
+            return new Function(new SumChunk(new List<IChunk>() { new BaseChunk(-b, null, 1), a.IFunction.Copy() }));
         }
         public static Function operator ^(Function a, double b)
         {
-            return new Function( new ChainChunk(1,a.IFunction.Copy(), new BaseChunk(b, null, 1)), new List<string>(a.Variables));
+            return new Function( new ChainChunk(1,a.IFunction.Copy(), new BaseChunk(b, null, 1)));
         }
         #endregion
 

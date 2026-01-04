@@ -45,7 +45,7 @@ namespace RaviinLib.CAS
 
             foreach (var Func in Vector)
             {
-                Derivatives.Add(Func.GetGradiant(Variables).Select(c => { c.Variables = Variables; return c; }).ToArray());
+                Derivatives.Add(Func.GetGradiant(Variables));
             }
             return Derivatives.ToArray();
         }
@@ -73,7 +73,7 @@ namespace RaviinLib.CAS
             List<string> NewVars = new List<string>(a.Variables);
             NewVars.AddRange(b.Variables);
 
-            Function Func = new Function("0", NewVars.Distinct().ToList());
+            Function Func = new Function("0");
 
             for (int i = 0; i < a.Length; i++)
             {
@@ -104,7 +104,7 @@ namespace RaviinLib.CAS
         {
             if (a.Count != b.Length) throw new Exception("Size Mismatch");
 
-            Function Func = new Function("0", b.Variables);
+            Function Func = new Function("0");
 
             for (int i = 0; i < a.Count; i++)
             {

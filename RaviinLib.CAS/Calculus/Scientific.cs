@@ -236,7 +236,7 @@ namespace RaviinLib.CAS
 
         public static implicit operator Function(Variable a)
         {
-            return new Function(new BaseChunk(a.Var), new List<string>() { a.Var });
+            return new Function(new BaseChunk(a.Var));
         }
 
         public static implicit operator string(Variable a)
@@ -329,7 +329,7 @@ namespace RaviinLib.CAS
         //}
         public ScientificFunction(IChunk Fx, string Unit, List<Variable> Variables)
         {
-            this.Function = new Function(Fx, Variables.Select(c => c.Var).ToList());
+            this.Function = new Function(Fx);
             this.Variables = Variables;
             this.RawUnit = Unit;
         }
