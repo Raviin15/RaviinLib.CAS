@@ -105,9 +105,9 @@ namespace RaviinLib.CAS
 
             if (Variables == null || Variables.Count == 0) Variables = GetVariables(Fx);
 
+                return SubChunk(Fx.AsSpan(), Variables);
             try
             {
-                return SubChunk(Fx.AsSpan(), Variables);
             }
             catch (Exception e)
             {
@@ -501,10 +501,13 @@ namespace RaviinLib.CAS
                 int expStart = CloseIndex + 2;
                 if (expStart < Chunk.Length)
                 {
+                    if (Chunk[expStart - 1] != '^') throw new Exception($"Failed to parse exponent of: {Chunk.ToString()}");
+                    
                     Return.Exp = (expStart, Chunk.Length - expStart);
                 }
                 else
                 {
+                    if (CloseIndex+1 != Chunk.Length) throw new Exception($"Failed to parse exponent of: {Chunk.ToString()}");
                     Return.Exp = (0, 0);
                 }
             }
