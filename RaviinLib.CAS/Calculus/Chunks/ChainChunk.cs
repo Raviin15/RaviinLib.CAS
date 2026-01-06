@@ -43,6 +43,12 @@ namespace RaviinLib.CAS
         {
             IChunk Chunk1 = Chunk.Derivative(Var);
 
+            if (Chunk1 is BaseChunk cb && cb.Var == null && cb.Exp == 1 && cb.Coeff == 0)
+            {
+                if (Exp is BaseChunk eb && eb.Var == null && Math.Pow(eb.Coeff, eb.Exp) == 0) return new BaseChunk(Coeff);
+                return new BaseChunk(0);
+            }
+
             if (Exp is BaseChunk b && b.Var == null)
             {
                 var exp = Math.Pow(b.Coeff, b.Exp);

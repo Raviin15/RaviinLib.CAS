@@ -21,10 +21,12 @@ namespace RaviinLib.CAS
             foreach (var Chunk in Chunks)
             {
                 var d = Chunk.Derivative(Var);
-                if (d == null) continue;//(d is BaseChunk b && b.Coeff == 0) ||
+                if ((d is BaseChunk b && b.Var == null && b.Exp == 1 && b.Coeff == 0)) continue;//(d is BaseChunk b && b.Coeff == 0) ||
                 chunks.Add(d);
             }
 
+            if (chunks.Count == 0) return new BaseChunk(0);
+            if (chunks.Count == 1) return chunks[0];
             return new SumChunk(chunks);
         }
 

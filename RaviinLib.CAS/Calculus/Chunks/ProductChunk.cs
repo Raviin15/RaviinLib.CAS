@@ -188,6 +188,12 @@ namespace RaviinLib.CAS
             var Chunk1Derivative = Chunk1.Derivative(Var);
             var Chunk2Derivative = Chunk2.Derivative(Var);
 
+            if (
+                (Chunk1Derivative is BaseChunk cb1 && cb1.Var == null && cb1.Exp == 1 && cb1.Coeff == 0) 
+                ||
+                (Chunk2Derivative is BaseChunk cb2 && cb2.Var == null && cb2.Exp == 1 && cb2.Coeff == 0)
+                ) return new BaseChunk(0);
+
             if (Chunk1Derivative is BaseChunk b && b.Var == null && b.Exp == 1)
             {
                 if (b.Coeff == 1) Chunks.Add(Chunk2);

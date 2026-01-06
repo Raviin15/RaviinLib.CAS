@@ -44,7 +44,7 @@ public class BaseChunk : IChunk
 
             if (this.Var == null || Exp == 0 || this.Var != Var)
             {
-                return new BaseChunk(0, null, 1);
+                return new BaseChunk(0);
             }
 
             if (Exp == 1)

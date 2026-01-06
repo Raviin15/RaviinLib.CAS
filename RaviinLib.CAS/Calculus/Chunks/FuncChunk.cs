@@ -114,7 +114,21 @@ namespace RaviinLib.CAS
         public IChunk Derivative(string Var)
         {
             var ChunkDeriv = Chunk.Derivative(Var);
-            bool isOne = (ChunkDeriv is BaseChunk b && b.Var == null && b.Exp == 1 && b.Coeff == 1);
+
+            if (ChunkDeriv is BaseChunk b && b.Var == null && b.Exp == 1 && b.Coeff == 0)
+            {
+                if (SecondChunk != null)
+                {
+                    var SecondChunkDeriv = SecondChunk.Derivative(Var);
+                    if (SecondChunkDeriv is BaseChunk bb2 && bb2.Var == null && bb2.Exp == 1 && bb2.Coeff == 0)
+                    {
+                        return new BaseChunk(0);
+                    }
+                }
+                else return new BaseChunk(0);
+            }
+
+            bool isOne = (ChunkDeriv is BaseChunk bb && bb.Var == null && bb.Exp == 1 && bb.Coeff == 1);
 
             switch (Function)
             {
