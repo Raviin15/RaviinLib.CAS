@@ -223,7 +223,105 @@ namespace RaviinLib.CAS
 
         private static IChunk SubChunk(ReadOnlySpan<char> Fx)
         {
-            var s = CheckSumChunk(Fx);
+            List<(int Start, int Length)> SumSubstrings = new List<(int Start, int Length)>(4);
+            List<(int Start, int Length, bool IsNextQuotient)> ProductSubstrings = new List<(int Start, int Length, bool IsNextQuotient)>(4);
+
+
+            int SumLastSign = 0;
+            int ProdLastSign = 0;
+            int skip = 0;
+
+            int OpenIndex = -1;
+            int CloseIndex = OpenIndex;
+            int powIndex = -1;
+
+            ReadOnlySpan<char> firstVar = null;
+            int varIndex = -1;
+
+            for (int i = 0; i < Fx.Length; i++)
+            {
+                char c = Fx[i];
+                char cPrev;
+                if (i == 0) cPrev = ' ';
+                else cPrev = Fx[i - 1];
+
+                if (Fx[i] == '(') { skip++; if (OpenIndex == -1) OpenIndex = i; continue; }
+                if (Fx[i] == ')')
+                {
+                    skip--;
+                    if (skip == 0)
+                    {
+                        CloseIndex = i;
+                    }
+                    continue;
+                }
+
+                if (skip == 0)
+                {
+
+                    if (c == '+' && cPrev != 'E')
+                    {
+                        SumSubstrings.Add((SumLastSign, i - SumLastSign));
+
+                        SumLastSign = i + 1;
+                        continue;
+                    }
+
+                    if (c == '-' &&
+                        i != 0 &&
+                        cPrev != '+' &&
+                        cPrev != '^' &&
+                        cPrev != '*' &&
+                        cPrev != '/' &&
+                        cPrev != 'E')
+                    {
+                        SumSubstrings.Add((SumLastSign, i - SumLastSign));
+
+                        SumLastSign = i;
+                        continue;
+                    }
+
+                    if (c == '*')
+                    {
+                        ProductSubstrings.Add((ProdLastSign, i - ProdLastSign, false));
+
+                        ProdLastSign = i + 1;
+                        continue;
+                    }
+
+                    if (c == '/')
+                    {
+                        ProductSubstrings.Add((ProdLastSign, i - ProdLastSign, true));
+
+                        ProdLastSign = i + 1;
+                        continue;
+
+                    }
+
+                    if (c == '^' && powIndex == -1)
+                    {
+                        powIndex = i;
+                        continue;
+                    }
+
+                    if (!Chunker.DisallowedVarCharsSet.Contains(c))
+                    {
+                        varIndex = i;
+                        if (powIndex == -1)
+                        {
+                            if (firstVar != null) firstVar = Fx.Slice(i);
+                            continue;
+                        }
+                        else
+                        {
+                            if (firstVar != null) firstVar = Fx.Slice(i, powIndex - i);
+                            continue;
+                        }
+                    }
+                }
+            }
+
+            var s = CheckSumChunk(Fx, SumSubstrings, SumLastSign);
             if (s.IsSum)
             {
                 List<IChunk> chunks = new List<IChunk>(s.Substrings.Count);
@@ -236,7 +334,7 @@ namespace RaviinLib.CAS
                 return new SumChunk(chunks);
             }
 
-            var p = CheckProdChunk(Fx);
+            var p = CheckProdChunk(Fx, ProductSubstrings, ProdLastSign);
             if (p.IsProd)
             {
                 var n = p.Substrings.Count;
@@ -261,7 +359,7 @@ namespace RaviinLib.CAS
                 return Prod;
             }
 
-            var f = CheckFuncChunk(Fx);
+            var f = CheckFuncChunk(Fx, OpenIndex, CloseIndex);
             if (f.IsFunc)
             {
                 string coeffStr = Fx.Slice(f.Substrings.Coeff.Start, f.Substrings.Coeff.Length).ToString();
@@ -315,21 +413,21 @@ namespace RaviinLib.CAS
                 
             }
 
-            var c = CheckChainChunk(Fx);
-            if (c.IsChain)
+            var ch = CheckChainChunk(Fx, OpenIndex, CloseIndex);
+            if (ch.IsChain)
             {
-                string coeffStr = Fx.Slice(c.Substrings.Coeff.Start, c.Substrings.Coeff.Length).ToString();
+                string coeffStr = Fx.Slice(ch.Substrings.Coeff.Start, ch.Substrings.Coeff.Length).ToString();
                 coeffStr = (coeffStr == "") ? "1" : (coeffStr == "-") ? "-1" : coeffStr;
 
-                string expStr = Fx.Slice(c.Substrings.Exp.Start, c.Substrings.Exp.Length).ToString();
+                string expStr = Fx.Slice(ch.Substrings.Exp.Start, ch.Substrings.Exp.Length).ToString();
                 expStr = (expStr == "") ? "1" : (expStr == "-") ? "-1" : expStr;
 
                 if (double.TryParse(coeffStr, out double Coeff))
                 {
                     IChunk Exp = SubChunk(expStr.AsSpan());
-                    //double Exp = double.Parse(c.Substrings.Exp);
+                    //double Exp = double.Parse(ch.Substrings.Exp);
 
-                    return new ChainChunk(Coeff, SubChunk(Fx.Slice(c.Substrings.Chunk.Start, c.Substrings.Chunk.Length)), Exp);
+                    return new ChainChunk(Coeff, SubChunk(Fx.Slice(ch.Substrings.Chunk.Start, ch.Substrings.Chunk.Length)), Exp);
                 }
                 else
                 {
@@ -338,7 +436,7 @@ namespace RaviinLib.CAS
                         IChunk ICoeff = SubChunk(coeffStr.AsSpan());
                         IChunk Exp = SubChunk(expStr.AsSpan());
 
-                        return new ProductChunk(ICoeff,new ChainChunk(1, SubChunk(Fx.Slice(c.Substrings.Chunk.Start, c.Substrings.Chunk.Length)), Exp));
+                        return new ProductChunk(ICoeff,new ChainChunk(1, SubChunk(Fx.Slice(ch.Substrings.Chunk.Start, ch.Substrings.Chunk.Length)), Exp));
                     }
                     catch (Exception)
                     {
@@ -346,7 +444,7 @@ namespace RaviinLib.CAS
                 }
             }
 
-            if (TryParseBaseChunk(Fx, out IChunk b))
+            if (TryParseBaseChunk(Fx, out IChunk b, powIndex, firstVar, varIndex))
             {
                 return b;
             }
@@ -355,49 +453,8 @@ namespace RaviinLib.CAS
             //return new BaseChunk(0, null, 1);
         }
 
-        private static (bool IsSum, List<(int Start, int Length)> Substrings) CheckSumChunk(ReadOnlySpan<char> Chunk)
+        private static (bool IsSum, List<(int Start, int Length)> Substrings) CheckSumChunk(ReadOnlySpan<char> Chunk, List<(int Start, int Length)> Substrings, int LastSign)
         {
-            List<(int Start, int Length)> Substrings = new List<(int Start, int Length)>(4);
-
-            int LastSign = 0;
-            int skip = 0;
-
-            for (int i = 0; i < Chunk.Length; i++)
-            {
-                char c = Chunk[i];
-                char cPrev;
-                if (i == 0) cPrev = ' ';
-                else cPrev = Chunk[i - 1];
-
-                if (Chunk[i] == '(') { skip++; continue; }
-                if (Chunk[i] == ')') { skip--; continue; }
-
-                if (skip == 0)
-                {
-
-                    if (c == '+' && cPrev != 'E')
-                    {
-                        Substrings.Add((LastSign, i - LastSign));
-
-                        LastSign = i + 1;
-                        continue;
-                    }
-
-                    if (c == '-' &&
-                        i != 0 && 
-                        cPrev != '+' && 
-                        cPrev != '^' && 
-                        cPrev != '*' &&
-                        cPrev != '/' &&
-                        cPrev != 'E')
-                    {
-                        Substrings.Add((LastSign, i - LastSign));
-
-                        LastSign = i;
-                        continue;
-                    }
-                }
-            }
 
             if (Substrings.Count > 0)
             {
@@ -407,43 +464,8 @@ namespace RaviinLib.CAS
             return (Substrings.Count > 0, Substrings);
         }
 
-        private static (bool IsProd, List<(int Start, int Length, bool IsNextQuotient)> Substrings) CheckProdChunk(ReadOnlySpan<char> Chunk)
+        private static (bool IsProd, List<(int Start, int Length, bool IsNextQuotient)> Substrings) CheckProdChunk(ReadOnlySpan<char> Chunk, List<(int Start, int Length, bool IsNextQuotient)> Substrings, int LastSign)
         {
-            List<(int Start, int Length, bool IsNextQuotient)> Substrings = new List<(int Start, int Length, bool IsNextQuotient)>(4);
-
-            int LastSign = 0;
-
-            int skip = 0;
-
-            for (int i = 0; i < Chunk.Length; i++)
-            {
-                char c = Chunk[i];
-
-                if (c == '(') { skip++; continue; }
-                if (c == ')') { skip--; continue; }
-
-                if (skip == 0)
-                {
-                    if (c == '*')
-                    {
-                        Substrings.Add((LastSign, i - LastSign, false));
-
-                        LastSign = i + 1;
-                        continue;
-                    }
-
-                    if (c == '/')
-                    {
-                        Substrings.Add((LastSign, i - LastSign, true));
-
-                        LastSign = i + 1;
-                        continue;
-
-                    }
-                }
-                
-            }
-
             if (Substrings.Count > 0)
             {
                 Substrings.Add((LastSign, Chunk.Length - LastSign, false));
@@ -462,29 +484,11 @@ namespace RaviinLib.CAS
                     (int Start, int Length) Exp, 
                     Functions Func
                 ) Substrings 
-            ) CheckFuncChunk(ReadOnlySpan<char> Chunk)
+            ) CheckFuncChunk(ReadOnlySpan<char> Chunk, int OpenIndex, int CloseIndex)
         {
 
-            int OpenIndex = Chunk.IndexOf('(');
             if (OpenIndex <= 0 || !FunctionChars.Contains(Chunk[OpenIndex - 1])) 
                 return (false, ((0,0), (0, 0), (0, 0), (0, 0), Functions.Abs));
-
-
-            int CloseIndex = OpenIndex;
-            int skip = 0;
-            for (int i = OpenIndex; i < Chunk.Length; i++)
-            {
-                if (Chunk[i] == '(') skip++;
-                else if (Chunk[i] == ')')
-                {
-                    skip--;
-                    if (skip == 0)
-                    {
-                        CloseIndex = i;
-                        break;
-                    }
-                }
-            }
 
             ((int Start, int Length) Coeff, (int Start, int Length) Chunk, (int Start, int Length) SecondChunk, (int Start, int Length) Exp, Functions Func) Return = (((0, 0), (0, 0), (0, 0), (0, 0), Functions.Abs));
 
@@ -532,29 +536,10 @@ namespace RaviinLib.CAS
             return (OpenIndex != CloseIndex, Return);
         }
 
-        private static (bool IsChain, ((int Start, int Length) Coeff, (int Start, int Length) Chunk, (int Start, int Length) Exp) Substrings) CheckChainChunk(ReadOnlySpan<char> Chunk)
+        private static (bool IsChain, ((int Start, int Length) Coeff, (int Start, int Length) Chunk, (int Start, int Length) Exp) Substrings) CheckChainChunk(ReadOnlySpan<char> Chunk, int OpenIndex, int CloseIndex)
         {
-            int OpenIndex = Chunk.IndexOf('(');
             if (OpenIndex == -1) return (false, ((0,0), (0, 0), (0, 0)));
-
-            int CloseIndex = OpenIndex;
-
-
-            int skip = 0;
-            for (int i = OpenIndex; i < Chunk.Length; i++)
-            {
-                if (Chunk[i] == '(') skip++;
-                else if (Chunk[i] == ')')
-                {
-                    skip--;
-                    if (skip == 0)
-                    {
-                        CloseIndex = i;
-                        break;
-                    }
-                }
-            }
-
+            
             ((int Start, int Length) Coeff, (int Start, int Length) Chunk, (int Start, int Length) Exp) Return = ((0, 0), (0, 0), (0, 0));
 
             if (OpenIndex != CloseIndex)
@@ -585,30 +570,9 @@ namespace RaviinLib.CAS
             return (OpenIndex != CloseIndex, Return);
         }
 
-        public static bool TryParseBaseChunk(ReadOnlySpan<char> Fx, out IChunk b)
+        public static bool TryParseBaseChunk(ReadOnlySpan<char> Fx, out IChunk b, int powIndex, ReadOnlySpan<char> firstVar, int varIndex)
         {
             b = null;
-
-            var powIndex = Fx.IndexOf('^');
-            ReadOnlySpan<char> firstVar = null;
-            int varIndex = -1;
-            for (int i = 0; i < Fx.Length; i++)
-            {
-                if (!Chunker.DisallowedVarCharsSet.Contains(Fx[i]))
-                {
-                    varIndex = i;
-                    if (powIndex == -1)
-                    {
-                        firstVar = Fx.Slice(i);
-                        break;
-                    }
-                    else
-                    {
-                        firstVar = Fx.Slice(i, powIndex - i);
-                        break;
-                    }
-                }
-            }
 
             // Fx = x
             if (firstVar != null && Fx.SequenceEqual(firstVar))
