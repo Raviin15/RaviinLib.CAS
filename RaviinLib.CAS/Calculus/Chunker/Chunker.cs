@@ -17,7 +17,27 @@ namespace RaviinLib.CAS
             'è', 'ï', 'î', 'ì', 'Ä', 'Å', 'É', 'æ', 'Æ', 'ô',
             'ö', 'ò', 'û', 'ù', 'ÿ', 'Þ', 'Ý', 'ß', 'Ŋ', 'Ü'
         };
+
+        public static readonly HashSet<char> DisallowedVarCharsSet = new HashSet<char>
+        {
+            ' ', '.', ',', '+', '-', '*', '/', '(', ')', '^', 'E',
+            '0','1','2','3','4','5','6','7','8','9',
+            'Ç','Ë','Ê','ü','é','â','ä','à','å','ç','ê','ë',
+            'è','ï','î','ì','Ä','Å','É','æ','Æ','ô',
+            'ö','ò','û','ù','ÿ','Þ','Ý','ß','Ŋ','Ü'
+        };
+
+        public static readonly HashSet<char> DissalowedVarCharsExcludingNumbersSet = new HashSet<char>
+        {
+            ' ', '.', ',', '+', '-', '*', '/', '(', ')', '^', 'E',
+            'Ç','Ë','Ê','ü','é','â','ä','à','å','ç','ê','ë',
+            'è','ï','î','ì','Ä','Å','É','æ','Æ','ô',
+            'ö','ò','û','ù','ÿ','Þ','Ý','ß','Ŋ','Ü'
+        };
+
         public static readonly List<char> DissalowedVarCharsExcludingNumbers = DissalowedVarChars.Where(c => !int.TryParse(c.ToString(), out _)).ToList();
+
+        [Obsolete("No longer needed or maintained.", true)]
         public static List<string> GetVariables(string Function)
         {
             Function = Function.Replace(" ", "");
@@ -89,7 +109,7 @@ namespace RaviinLib.CAS
 
         #endregion
 
-        public static IChunk Chunckify(string Fx, List<string> Variables = null)
+        public static IChunk Chunckify(string Fx)
         {
             if (Fx == string.Empty) return null; //throw new("Fx has no length.");
 
@@ -103,11 +123,9 @@ namespace RaviinLib.CAS
             }
             #endregion
 
-            if (Variables == null || Variables.Count == 0) Variables = GetVariables(Fx);
-
-                return SubChunk(Fx.AsSpan(), Variables);
             try
             {
+                return SubChunk(Fx.AsSpan());
             }
             catch (Exception e)
             {
@@ -115,7 +133,7 @@ namespace RaviinLib.CAS
             }
         }
 
-        [Obsolete("Chunkify no longer needs special formatting.")]
+        [Obsolete("Chunkify no longer needs special formatting.", true)]
         private static (string Formatted, List<string> Variables) FormatString(string Fx, List<string> Variables)
         {
             Fx = Fx.Replace(" ", "");
@@ -203,7 +221,7 @@ namespace RaviinLib.CAS
             return (Fx, Variables);
         }
 
-        private static IChunk SubChunk(ReadOnlySpan<char> Fx, List<string> Variables)
+        private static IChunk SubChunk(ReadOnlySpan<char> Fx)
         {
             var s = CheckSumChunk(Fx);
             if (s.IsSum)
@@ -213,7 +231,7 @@ namespace RaviinLib.CAS
                 foreach (var (start, length) in s.Substrings)
                 {
                     var slice = Fx.Slice(start, length); // one alloc per term
-                    chunks.Add(SubChunk(slice, Variables));
+                    chunks.Add(SubChunk(slice));
                 }
                 return new SumChunk(chunks);
             }
@@ -225,13 +243,13 @@ namespace RaviinLib.CAS
                 if (n <= 1) throw new Exception("Failed");
 
                 var first = p.Substrings[0];
-                IChunk Prod = SubChunk(Fx.Slice(first.Start, first.Length), Variables);
+                IChunk Prod = SubChunk(Fx.Slice(first.Start, first.Length));
 
                 for (int i = 1; i < n; i++)
                 {
                     var current = p.Substrings[i];
                     var slice = Fx.Slice(current.Start, current.Length); // one alloc per term
-                    var chunk = SubChunk(slice, Variables);
+                    var chunk = SubChunk(slice);
 
                     if (!p.Substrings[i-1].IsNextQuotient)
                     {
@@ -252,7 +270,7 @@ namespace RaviinLib.CAS
                 string expStr = Fx.Slice(f.Substrings.Exp.Start, f.Substrings.Exp.Length).ToString();
                 expStr = (expStr == "") ? "1" : (expStr == "-") ? "-1" : expStr;
 
-                IChunk SecondChunk = (f.Substrings.SecondChunk.Start == 0 && f.Substrings.SecondChunk.Length == 0) ? null : SubChunk(Fx.Slice(f.Substrings.SecondChunk.Start, f.Substrings.SecondChunk.Length), Variables);
+                IChunk SecondChunk = (f.Substrings.SecondChunk.Start == 0 && f.Substrings.SecondChunk.Length == 0) ? null : SubChunk(Fx.Slice(f.Substrings.SecondChunk.Start, f.Substrings.SecondChunk.Length));
 
                 if (double.TryParse(expStr, out double Exp))
                 {
@@ -260,37 +278,37 @@ namespace RaviinLib.CAS
                     {
                         if (Exp != 1)
                         {
-                            return new ChainChunk(Coeff, new FuncChunk(SubChunk(Fx.Slice(f.Substrings.Chunk.Start, f.Substrings.Chunk.Length), Variables), f.Substrings.Func) { SecondChunk = SecondChunk }, new BaseChunk(Exp, null, 1));
+                            return new ChainChunk(Coeff, new FuncChunk(SubChunk(Fx.Slice(f.Substrings.Chunk.Start, f.Substrings.Chunk.Length)), f.Substrings.Func) { SecondChunk = SecondChunk }, new BaseChunk(Exp, null, 1));
                         }
 
-                        return new FuncChunk(SubChunk(Fx.Slice(f.Substrings.Chunk.Start, f.Substrings.Chunk.Length), Variables), f.Substrings.Func, Coeff) { SecondChunk = SecondChunk };
+                        return new FuncChunk(SubChunk(Fx.Slice(f.Substrings.Chunk.Start, f.Substrings.Chunk.Length)), f.Substrings.Func, Coeff) { SecondChunk = SecondChunk };
                     }
                     else
                     {
-                        IChunk ICoeff = SubChunk(coeffStr.AsSpan(), Variables);
+                        IChunk ICoeff = SubChunk(coeffStr.AsSpan());
 
                         if (Exp != 1)
                         {
-                            return new ProductChunk(ICoeff, new ChainChunk(1, new FuncChunk(SubChunk(Fx.Slice(f.Substrings.Chunk.Start, f.Substrings.Chunk.Length), Variables), f.Substrings.Func) { SecondChunk = SecondChunk }, new BaseChunk(Exp, null, 1)));
+                            return new ProductChunk(ICoeff, new ChainChunk(1, new FuncChunk(SubChunk(Fx.Slice(f.Substrings.Chunk.Start, f.Substrings.Chunk.Length)), f.Substrings.Func) { SecondChunk = SecondChunk }, new BaseChunk(Exp, null, 1)));
                         }
 
-                        return new ProductChunk(ICoeff, new FuncChunk(SubChunk(Fx.Slice(f.Substrings.Chunk.Start, f.Substrings.Chunk.Length), Variables), f.Substrings.Func) { SecondChunk = SecondChunk });
+                        return new ProductChunk(ICoeff, new FuncChunk(SubChunk(Fx.Slice(f.Substrings.Chunk.Start, f.Substrings.Chunk.Length)), f.Substrings.Func) { SecondChunk = SecondChunk });
                         
                     }
                 }
                 else
                 {
-                    IChunk IExp = SubChunk(expStr.AsSpan(), Variables);
+                    IChunk IExp = SubChunk(expStr.AsSpan());
                     
                     if (double.TryParse(coeffStr, out double Coeff))
                     {
-                        return new ChainChunk(Coeff, new FuncChunk(SubChunk(Fx.Slice(f.Substrings.Chunk.Start, f.Substrings.Chunk.Length), Variables), f.Substrings.Func) { SecondChunk = SecondChunk }, IExp);
+                        return new ChainChunk(Coeff, new FuncChunk(SubChunk(Fx.Slice(f.Substrings.Chunk.Start, f.Substrings.Chunk.Length)), f.Substrings.Func) { SecondChunk = SecondChunk }, IExp);
                     }
                     else
                     {
-                        IChunk ICoeff = SubChunk(coeffStr.AsSpan(), Variables);
+                        IChunk ICoeff = SubChunk(coeffStr.AsSpan());
 
-                        return new ProductChunk(ICoeff, new ChainChunk(1, new FuncChunk(SubChunk(Fx.Slice(f.Substrings.Chunk.Start, f.Substrings.Chunk.Length), Variables), f.Substrings.Func) { SecondChunk = SecondChunk }, IExp));
+                        return new ProductChunk(ICoeff, new ChainChunk(1, new FuncChunk(SubChunk(Fx.Slice(f.Substrings.Chunk.Start, f.Substrings.Chunk.Length)), f.Substrings.Func) { SecondChunk = SecondChunk }, IExp));
                     }
                 }
 
@@ -308,19 +326,19 @@ namespace RaviinLib.CAS
 
                 if (double.TryParse(coeffStr, out double Coeff))
                 {
-                    IChunk Exp = SubChunk(expStr.AsSpan(), Variables);
+                    IChunk Exp = SubChunk(expStr.AsSpan());
                     //double Exp = double.Parse(c.Substrings.Exp);
 
-                    return new ChainChunk(Coeff, SubChunk(Fx.Slice(c.Substrings.Chunk.Start, c.Substrings.Chunk.Length), Variables), Exp);
+                    return new ChainChunk(Coeff, SubChunk(Fx.Slice(c.Substrings.Chunk.Start, c.Substrings.Chunk.Length)), Exp);
                 }
                 else
                 {
                     try
                     {
-                        IChunk ICoeff = SubChunk(coeffStr.AsSpan(), Variables);
-                        IChunk Exp = SubChunk(expStr.AsSpan(), Variables);
+                        IChunk ICoeff = SubChunk(coeffStr.AsSpan());
+                        IChunk Exp = SubChunk(expStr.AsSpan());
 
-                        return new ProductChunk(ICoeff,new ChainChunk(1, SubChunk(Fx.Slice(c.Substrings.Chunk.Start, c.Substrings.Chunk.Length), Variables), Exp));
+                        return new ProductChunk(ICoeff,new ChainChunk(1, SubChunk(Fx.Slice(c.Substrings.Chunk.Start, c.Substrings.Chunk.Length)), Exp));
                     }
                     catch (Exception)
                     {
@@ -328,8 +346,7 @@ namespace RaviinLib.CAS
                 }
             }
 
-            var IsBase = TryParseBaseChunk(Fx, Variables, out IChunk b);
-            if (IsBase)
+            if (TryParseBaseChunk(Fx, out IChunk b))
             {
                 return b;
             }
@@ -568,24 +585,30 @@ namespace RaviinLib.CAS
             return (OpenIndex != CloseIndex, Return);
         }
 
-        public static bool TryParseBaseChunk(ReadOnlySpan<char> Fx, List<string> Variables, out IChunk b)
+        public static bool TryParseBaseChunk(ReadOnlySpan<char> Fx, out IChunk b)
         {
             b = null;
 
-            // Find first variable index
-            int varIndex = -1; //Variables.Select(c => Fx.IndexOf(c)).Where(c => c != -1);
+            var powIndex = Fx.IndexOf('^');
             ReadOnlySpan<char> firstVar = null;
-            for (int i = 0; i < Variables.Count; i++)
+            int varIndex = -1;
+            for (int i = 0; i < Fx.Length; i++)
             {
-                var v = Variables[i].AsSpan();
-                int ind = Fx.IndexOf(v);
-                if (ind != -1 && (varIndex == -1 || ind < varIndex))
+                if (!Chunker.DisallowedVarCharsSet.Contains(Fx[i]))
                 {
-                    varIndex = ind;
-                    firstVar = v;
+                    varIndex = i;
+                    if (powIndex == -1)
+                    {
+                        firstVar = Fx.Slice(i);
+                        break;
+                    }
+                    else
+                    {
+                        firstVar = Fx.Slice(i, powIndex - i);
+                        break;
+                    }
                 }
             }
-
 
             // Fx = x
             if (firstVar != null && Fx.SequenceEqual(firstVar))
@@ -594,7 +617,7 @@ namespace RaviinLib.CAS
                 return true;
             }
 
-            var powIndex = Fx.IndexOf('^');
+            
 
             if (powIndex != -1)
             {
@@ -614,7 +637,7 @@ namespace RaviinLib.CAS
                         // a^()
                         try
                         {
-                            IChunk expChunk = SubChunk(right, Variables);
+                            IChunk expChunk = SubChunk(right);
                             b = new ChainChunk(1, new BaseChunk(numCoeff, null, 1), expChunk);
                             return true;
                         }
@@ -653,7 +676,7 @@ namespace RaviinLib.CAS
                         // ()^()
                         try
                         {
-                            IChunk expChunk = SubChunk(right, Variables);
+                            IChunk expChunk = SubChunk(right);
                             b = new ChainChunk(1, new BaseChunk(coeff, varName, 1), expChunk);
                             return true;
                         }
