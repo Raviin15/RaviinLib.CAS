@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RaviinLib.CAS", "RaviinLib.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RaviinLib.CAS.Testbench", "RaviinLib.CAS.Testbench\RaviinLib.CAS.Testbench.csproj", "{2EB5795F-542E-4896-833F-43822C45317F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RaviinLib.CAS.Test", "RaviinLib.CAS.Test\RaviinLib.CAS.Test.csproj", "{47C2B7A7-C339-D47F-E8AC-10B687EF85B8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{2EB5795F-542E-4896-833F-43822C45317F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2EB5795F-542E-4896-833F-43822C45317F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2EB5795F-542E-4896-833F-43822C45317F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{47C2B7A7-C339-D47F-E8AC-10B687EF85B8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{47C2B7A7-C339-D47F-E8AC-10B687EF85B8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{47C2B7A7-C339-D47F-E8AC-10B687EF85B8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{47C2B7A7-C339-D47F-E8AC-10B687EF85B8}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
