@@ -251,7 +251,7 @@ namespace RaviinLib.CAS
                     skip--;
                     if (skip == 0)
                     {
-                        CloseIndex = i;
+                        if (CloseIndex == -1) CloseIndex = i;
                     }
                     continue;
                 }
@@ -303,21 +303,21 @@ namespace RaviinLib.CAS
                         powIndex = i;
                         continue;
                     }
-
-                    if (!Chunker.DisallowedVarCharsSet.Contains(c))
+                }
+                if (!Chunker.DisallowedVarCharsSet.Contains(c))
+                {
+                    if (firstVar != null) continue;
+                    varIndex = i;
+                    if (powIndex == -1)
                     {
-                        varIndex = i;
-                        if (powIndex == -1)
-                        {
-                            if (firstVar != null) firstVar = Fx.Slice(i);
-                            continue;
-                        }
-                        else
-                        {
-                            if (firstVar != null) firstVar = Fx.Slice(i, powIndex - i);
-                            continue;
-                        }
+                        firstVar = Fx.Slice(i);
                     }
+                    else
+                    {
+                        if (powIndex - i < 0) continue;
+                        firstVar = Fx.Slice(i, powIndex - i);
+                    }
+                    continue;
                 }
             }
 
@@ -574,15 +574,7 @@ namespace RaviinLib.CAS
         {
             b = null;
 
-            // Fx = x
-            if (firstVar != null && Fx.SequenceEqual(firstVar))
-            {
-                b = new BaseChunk(Fx.ToString());
-                return true;
-            }
-
-            
-
+               
             if (powIndex != -1)
             {
                 ReadOnlySpan<char> left = Fx.Slice(0, powIndex);
@@ -673,8 +665,7 @@ namespace RaviinLib.CAS
             {
                 // ax
                 ReadOnlySpan<char> coeffSpan = Fx.Slice(0, varIndex);
-                double coeff = 1;
-                if (!double.TryParse(coeffSpan.SequenceEqual("-".AsSpan()) ? "-1" : coeffSpan.ToString(), out coeff))
+                if (!double.TryParse(coeffSpan.SequenceEqual("-".AsSpan()) ? "-1" : coeffSpan.ToString(), out double coeff))
                     return false;
 
                 string varName = Fx.Slice(varIndex).ToString();

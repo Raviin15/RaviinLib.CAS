@@ -510,5 +510,10 @@ namespace RaviinLib.CAS
             if (SecondChunk == null) return Chunk.GetVariables();
             return Chunk.GetVariables().Union(SecondChunk.GetVariables()).ToList();
         }
+
+        public string ToCode()
+        {
+            return $"new FuncChunk({Chunk.ToCode()},Functions.{Function},{Coeff}){{SecondChunk = {SecondChunk.ToCode()}}}";
+        }
     }
 }

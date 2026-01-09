@@ -23,5 +23,6 @@ public interface IChunk
 
         string ToString();
         string ToLatex();
+        string ToCode();
     }
 }

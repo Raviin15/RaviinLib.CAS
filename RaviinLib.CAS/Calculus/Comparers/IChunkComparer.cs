@@ -47,7 +47,7 @@ namespace RaviinLib.CAS
                 {
                     return (fa.Coeff == fb.Coeff) && (fa.Function == fb.Function) && (Equals(fa.Chunk, fb.Chunk)) && ((fa.SecondChunk == null && fb.SecondChunk == null) || Equals(fa.SecondChunk, fb.SecondChunk));
                 }
-                else if (newa is BaseChunk ba && b is BaseChunk bb)
+                else if (newa is BaseChunk ba && newb is BaseChunk bb)
                 {
                     return (ba.Coeff == bb.Coeff) && (ba.Exp == bb.Exp) && (ba.Var == bb.Var);
                 }

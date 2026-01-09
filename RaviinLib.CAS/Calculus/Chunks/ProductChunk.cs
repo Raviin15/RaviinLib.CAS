@@ -387,5 +387,10 @@ namespace RaviinLib.CAS
         {
             return Chunk1.GetVariables().Union(Chunk2.GetVariables()).ToList();
         }
+
+        public string ToCode()
+        {
+            return $"new ProductChunk({Chunk1.ToCode()},{Chunk2.ToCode()})";
+        }
     }
 }

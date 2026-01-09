@@ -247,5 +247,10 @@ namespace RaviinLib.CAS
         {
             return Chunks.SelectMany(c => c.GetVariables()).Distinct().ToList();
         }
+
+        public string ToCode()
+        {
+            return $"new SumChunk(new List<IChunk>(){{{string.Join(",",Chunks.Select(c => c.ToCode()))}}})";
+        }
     }
 }

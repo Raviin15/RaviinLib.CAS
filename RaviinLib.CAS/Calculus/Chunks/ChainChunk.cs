@@ -235,5 +235,10 @@ namespace RaviinLib.CAS
         {
             return Chunk.GetVariables().Union(Exp.GetVariables()).ToList();
         }
+
+        public string ToCode()
+        {
+            return $"new ChainChunk({Coeff},{Chunk.ToCode()},{Exp.ToCode()})";
+        }
     }
 }

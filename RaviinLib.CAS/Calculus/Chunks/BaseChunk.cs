@@ -163,6 +163,11 @@ public class BaseChunk : IChunk
             return new List<string>() { Var };
         }
 
+        public string ToCode()
+        {
+            return $"new BaseChunk({Coeff},{((Var == null) ? "null": $"\"{Var}\"")},{Exp})";
+        }
+
         public static BaseChunk operator *(BaseChunk Chunk, double Coeff)
         {
             BaseChunk NewChunk = (BaseChunk)Chunk.Copy();
