@@ -233,7 +233,7 @@ namespace RaviinLib.CAS
         /// <returns>A list of strings containing all variables. The list is empty if no variables exist.</returns>
         public List<string> GetVariables()
         {
-            return IFunction.GetVariables();
+            return IFunction?.GetVariables() ?? new List<string>();
         }
 
         /// <summary>
