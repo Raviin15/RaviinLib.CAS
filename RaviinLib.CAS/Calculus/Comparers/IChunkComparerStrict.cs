@@ -66,11 +66,13 @@ namespace RaviinLib.CAS
 
                 case ProductChunk p:
                     {
-                        int h1 = GetHashCode(p.Chunk1);
-                        int h2 = GetHashCode(p.Chunk2);
-                        int minHash = Math.Min(h1, h2);
-                        int maxHash = Math.Max(h1, h2);
-                        return HashCode.Combine(p.Coeff, minHash, maxHash);
+                        var chunkHashes = p.Chunks.Select(GetHashCode).OrderBy(h => h);
+                        return chunkHashes.Aggregate(p.Coeff.GetHashCode(), (acc, h) => HashCode.Combine(acc, h));
+                        //int h1 = GetHashCode(p.Chunk1);
+                        //int h2 = GetHashCode(p.Chunk2);
+                        //int minHash = Math.Min(h1, h2);
+                        //int maxHash = Math.Max(h1, h2);
+                        //return HashCode.Combine(p.Coeff, minHash, maxHash);
                     }
 
                 case ChainChunk c:
