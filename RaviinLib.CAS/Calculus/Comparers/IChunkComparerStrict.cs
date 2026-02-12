@@ -8,54 +8,50 @@ namespace RaviinLib.CAS
     {
         public bool Equals(IChunk a, IChunk b)
         {
+            if (ReferenceEquals(a, b)) return true;
             if (a == null || b == null) return false;
 
-            if (a is ProductChunk pa && b is ProductChunk pb)
-            {
-                return (pa.Coeff == pb.Coeff) && ((Equals(pa.Chunk1, pb.Chunk1)) && (Equals(pa.Chunk2, pb.Chunk2)) || (Equals(pa.Chunk1, pb.Chunk2)) && (Equals(pa.Chunk2, pb.Chunk1)));
-            }
-            else if (a is ChainChunk ca && b is ChainChunk cb)
-            {
-                return (ca.Coeff == cb.Coeff) && Equals(ca.Exp, cb.Exp) && Equals(ca.Chunk, cb.Chunk);
-            }
-            else if (a is SumChunk sa && b is SumChunk sb)
-            {
-                if (sa.Coeff != sb.Coeff || sa.Chunks.Count != sb.Chunks.Count) return false;
+            if (a.GetType() != b.GetType()) return false;
 
-                // Order-insensitive comparison of chunk sets
-                var aChunksGrouped = sa.Chunks.GroupBy(x => x, this);
-                var bChunksGrouped = sb.Chunks.GroupBy(x => x, this);
-
-                foreach (var groupA in aChunksGrouped)
-                {
-                    int countA = groupA.Count();
-                    int countB = bChunksGrouped.FirstOrDefault(g => Equals(g.Key, groupA.Key))?.Count() ?? -1;
-                    if (countA != countB)
-                        return false;
-                }
-
-                return true;
-
-                //OLD//return (sa.Coeff == sb.Coeff) && (sa.Chunks.Count == sb.Chunks.Count) && sa.Chunks.SequenceEqual(sb.Chunks, new IChunkComparer());
-            }
-            else if (a is FuncChunk fa && b is FuncChunk fb)
+            switch (a)
             {
-                return (fa.Coeff == fb.Coeff) && (fa.Function == fb.Function) && (Equals(fa.Chunk, fb.Chunk)) && ((fa.SecondChunk == null && fb.SecondChunk == null) || Equals(fa.SecondChunk, fb.SecondChunk));
+                case BaseChunk b1 when b is BaseChunk b2:
+                    return (b1.Coeff == b2.Coeff) && (b1.Exp == b2.Exp) && (b1.Var == b2.Var);
+                case ChainChunk c1 when b is ChainChunk c2:
+                    return (c1.Coeff == c2.Coeff) && Equals(c1.Exp, c2.Exp) && Equals(c1.Chunk, c2.Chunk);
+                case FuncChunk f1 when b is FuncChunk f2:
+                    return (f1.Coeff == f2.Coeff) && (f1.Function == f2.Function) && Equals(f1.Chunk, f2.Chunk) && ((f1.SecondChunk == null && f2.SecondChunk == null) || Equals(f1.SecondChunk, f2.SecondChunk));
+                case ProductChunk p1 when b is ProductChunk p2:
+                    return (p1.Coeff == p2.Coeff) && ((Equals(p1.Chunk1, p2.Chunk1)) && (Equals(p1.Chunk2, p2.Chunk2)) || (Equals(p1.Chunk1, p2.Chunk2)) && (Equals(p1.Chunk2, p2.Chunk1)));
+                case SumChunk s1 when b is SumChunk s2:
+                    if (s1.Coeff != s2.Coeff || s1.Chunks.Count != s2.Chunks.Count) return false;
+                    // Order-insensitive comparison of chunk sets
+                    var aChunksGrouped = s1.Chunks.GroupBy(x => x, this);
+                    var bChunksGrouped = s2.Chunks.GroupBy(x => x, this);
+                    foreach (var groupA in aChunksGrouped)
+                    {
+                        int countA = groupA.Count();
+                        int countB = bChunksGrouped.FirstOrDefault(g => Equals(g.Key, groupA.Key))?.Count() ?? -1;
+                        if (countA != countB)
+                            return false;
+                    }
+                    return true;
+
+                default:
+                    return false;
             }
-            else if (a is BaseChunk ba && b is BaseChunk bb)
-            {
-                return (ba.Coeff == bb.Coeff) && (ba.Exp == bb.Exp) && (ba.Var == bb.Var);
-            }
-            else return false;
 
         }
 
         public int GetHashCode(IChunk obj)
         {
-            var simplified = obj.Simplified();
+            if (obj is null) return 0;
 
-            switch (simplified)
+            switch (obj)
             {
+                case BaseChunk b:
+                    return HashCode.Combine(b.Coeff, b.Exp, b.Var);
+
                 case ProductChunk p:
                     {
                         int h1 = GetHashCode(p.Chunk1);
@@ -91,11 +87,8 @@ namespace RaviinLib.CAS
                         }
                     }
 
-                case BaseChunk b:
-                    return HashCode.Combine(b.Coeff, b.Exp, b.Var);
-
                 default:
-                    return obj.Coeff.GetHashCode();
+                    return obj.GetHashCode();
             }
         }
     }

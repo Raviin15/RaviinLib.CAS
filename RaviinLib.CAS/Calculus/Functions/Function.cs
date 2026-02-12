@@ -434,11 +434,11 @@ namespace RaviinLib.CAS
                     index++;
                 }
                 Variables.AddRange(LocalVariables);
-                SeparationAproxs.Add(new SumChunk(BaseChunks));
+                SeparationAproxs.Add(Chunker.Sum(BaseChunks));
                 OrigVarEquivilents[SepIFunc.Variables.First()] = new Function(OrigVarEquivilent.Remove(0, 2));
             }
 
-            return (new Function(new SumChunk(SeparationAproxs)), OrigVarEquivilents);
+            return (new Function(Chunker.Sum(SeparationAproxs)), OrigVarEquivilents);
         }
 
         /// <summary>
@@ -469,7 +469,7 @@ namespace RaviinLib.CAS
                     DistincVariables[Key].Add(c);
                 }
 
-                return DistincVariables.Select(c => new Function(new SumChunk(c.Value))).ToArray();
+                return DistincVariables.Select(c => new Function(Chunker.Sum(c.Value))).ToArray();
             }
             else if (IFunction is ProductChunk p)
             {
@@ -741,21 +741,21 @@ namespace RaviinLib.CAS
         #region Function,Function
         public static Function operator *(Function a, Function b)
         {
-            return new Function(new ProductChunk(a.IFunction.Copy(), b.IFunction.Copy()));
+            return new Function(Chunker.Product(a.IFunction.Copy(), b.IFunction.Copy()));
         }
         public static Function operator /(Function a, Function b)
         {
-            return new Function(new ProductChunk(a.IFunction.Copy(), new ChainChunk(1,b.IFunction.Copy(), new BaseChunk(-1,null,1))));
+            return new Function(Chunker.Product(a.IFunction.Copy(), Chunker.Chain(1,b.IFunction.Copy(), new BaseChunk(-1))));
         }
         public static Function operator +(Function a, Function b)
         {
-            return new Function(new SumChunk(new List<IChunk>() { a.IFunction.Copy(), b.IFunction.Copy() }));
+            return new Function(Chunker.Sum(a.IFunction.Copy(), b.IFunction.Copy() ));
         }
         public static Function operator -(Function a, Function b)
         {
             var bcopy = b.IFunction.Copy();
             bcopy.Coeff *= -1;
-            return new Function(new SumChunk(new List<IChunk>() { a.IFunction.Copy(), bcopy }));
+            return new Function(Chunker.Sum(a.IFunction.Copy(), bcopy));
         }
         #endregion
 
@@ -769,17 +769,17 @@ namespace RaviinLib.CAS
         }
         public static Function operator /(double a, Function b)
         {
-            return new Function(new ProductChunk(new BaseChunk(a,null,1),new ChainChunk(1, b.IFunction.Copy(), new BaseChunk(-1, null, 1))));
+            return new Function(Chunker.Product(new BaseChunk(a),Chunker.Chain(1, b.IFunction.Copy(), new BaseChunk(-1))));
         }
         public static Function operator +(double a, Function b)
         {
-            return new Function(new SumChunk(new List<IChunk>() { new BaseChunk(a, null, 1), b.IFunction.Copy() }));
+            return new Function(Chunker.Sum(new BaseChunk(a), b.IFunction.Copy() ));
         }
         public static Function operator -(double a, Function b)
         {
             var bcopy = b.IFunction.Copy();
             bcopy.Coeff *= -1;
-            return new Function(new SumChunk(new List<IChunk>() { new BaseChunk(a, null, 1), bcopy }));
+            return new Function(Chunker.Sum( new BaseChunk(a), bcopy ));
         }
         #endregion
 
@@ -800,15 +800,15 @@ namespace RaviinLib.CAS
         }
         public static Function operator +(Function a, double b)
         {
-            return new Function(new SumChunk(new List<IChunk>() { new BaseChunk(b, null, 1), a.IFunction.Copy() }));
+            return new Function(Chunker.Sum( new BaseChunk(b), a.IFunction.Copy() ));
         }
         public static Function operator -(Function a, double b)
         {
-            return new Function(new SumChunk(new List<IChunk>() { new BaseChunk(-b, null, 1), a.IFunction.Copy() }));
+            return new Function(Chunker.Sum( new BaseChunk(-b), a.IFunction.Copy() ));
         }
         public static Function operator ^(Function a, double b)
         {
-            return new Function( new ChainChunk(1,a.IFunction.Copy(), new BaseChunk(b, null, 1)));
+            return new Function( Chunker.Chain(1,a.IFunction.Copy(), new BaseChunk(b)));
         }
         #endregion
 

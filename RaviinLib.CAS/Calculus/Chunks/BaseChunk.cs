@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace RaviinLib.CAS
 {
-public class BaseChunk : IChunk
+    public class BaseChunk : IChunk
     {
         public double Coeff { get; set; }
         public string Var { get; set; }
@@ -42,17 +42,17 @@ public class BaseChunk : IChunk
         public IChunk Derivative(string Var)
         {
 
-            if (this.Var == null || Exp == 0 || this.Var != Var)
+            if (this.Var != Var || Exp == 0)
             {
                 return new BaseChunk(0);
             }
 
-            if (Exp == 1)
-            {
-                return new BaseChunk(Coeff, null, Exp);
-            }
+            //if (Exp == 1)
+            //{
+            //    return new BaseChunk(Coeff);
+            //}
 
-            return new BaseChunk(Coeff * Exp, this.Var, Exp - 1);
+            return Chunker.Base(Coeff * Exp, this.Var, Exp - 1);
         }
 
         public override string ToString()
@@ -67,22 +67,19 @@ public class BaseChunk : IChunk
         {
             return new BaseChunk(Coeff, Var, Exp);
         }
-        public static BaseChunk Copy(BaseChunk ChunkToCopy)
-        {
-            return new BaseChunk(ChunkToCopy.Coeff, ChunkToCopy.Var, ChunkToCopy.Exp);
-        }
 
         public IChunk Simplified()
         {
+            if (Coeff == 0) return new BaseChunk(0);
+
             if (Exp == 0)
             {
-                if (Var != null) return new BaseChunk(Coeff, null, 1);
-                else return new BaseChunk(1, null, 1);
+                if (Var != null) return new BaseChunk(Coeff);
+                else return new BaseChunk(1);
             }
 
-            if (Coeff == 1 && Var == null) return new BaseChunk(1, null, 1);
+            if (Coeff == 1 && Var == null) return new BaseChunk(1);
 
-            if (Coeff == 0) return null;
             return Copy();
         }
 
@@ -93,6 +90,13 @@ public class BaseChunk : IChunk
         public void MultiplyExpanded(double factor)
         {
             Multiply(factor);
+        }
+
+        public IChunk MultiplyBy(double factor)
+        {
+            IChunk NewChunk = Copy();
+            NewChunk.Multiply(factor);
+            return NewChunk;
         }
 
         public double Subs(Dictionary<string, double> Values)
@@ -108,7 +112,7 @@ public class BaseChunk : IChunk
             if (Var == null || !Values.ContainsKey(Var)) return Copy();
 
             IChunk Value = Values[Var];
-            return new ChainChunk(Coeff,Value, new BaseChunk(Exp, null, 1));
+            return Chunker.Chain(Coeff,Value, new BaseChunk(Exp));
                 
             //double Value = Values[(string)Var];
             //return new BaseChunk(this.Coeff * Math.Pow(Value,this.Exp), null, 1);
@@ -117,7 +121,7 @@ public class BaseChunk : IChunk
         public IChunk Expanded()
         {
 
-            if (Exp == 0) return new BaseChunk(1, null, 1);
+            if (Exp == 0) return new BaseChunk(1);
             else if (Exp <= 1) return Copy();
             else
             {
@@ -127,7 +131,7 @@ public class BaseChunk : IChunk
                 IChunk ReturnChunk = BaseCopy;
                 for (int i = 1; i < Exp; i++)
                 {
-                    ReturnChunk = new ProductChunk(ReturnChunk, BaseCopy.Copy());
+                    ReturnChunk = Chunker.Product(ReturnChunk, BaseCopy.Copy());
                 }
                 ((ProductChunk)ReturnChunk).Chunk2.MultiplyExpanded(Coeff);
                 return ReturnChunk.Expanded();
@@ -150,10 +154,10 @@ public class BaseChunk : IChunk
 
         public IChunk Antiderivative(string Var)
         {
-            if (Exp == -1) return new FuncChunk(new FuncChunk(new BaseChunk(Var),Functions.Abs), Functions.ln, Coeff);
-            if (this.Var == null) return new BaseChunk(Math.Pow(Coeff, Exp), Var, 1);
+            if (Exp == -1) return Chunker.Func(Chunker.Func(new BaseChunk(Var),Functions.Abs), Functions.ln, Coeff);
+            if (this.Var == null) return Chunker.Base(Math.Pow(Coeff, Exp), Var, 1);
 
-            return new BaseChunk(Coeff / (Exp + 1), this.Var, Exp + 1);
+            return Chunker.Base(Coeff / (Exp + 1), this.Var, Exp + 1);
             
         }
 
@@ -168,29 +172,42 @@ public class BaseChunk : IChunk
             return $"new BaseChunk({Coeff},{((Var == null) ? "null": $"\"{Var}\"")},{Exp})";
         }
 
-        public static BaseChunk operator *(BaseChunk Chunk, double Coeff)
+        public bool IsOne()
         {
-            BaseChunk NewChunk = (BaseChunk)Chunk.Copy();
-            NewChunk.Coeff *= Coeff;
-            return NewChunk;
-        }
-        public static BaseChunk operator *(double Coeff, BaseChunk Chunk)
-        {
-            BaseChunk NewChunk = (BaseChunk)Chunk.Copy();
-            NewChunk.Coeff *= Coeff;
-            return NewChunk;
+            if (Var != null) return false;
+
+            return Coeff == 1 || Exp == 0;
         }
 
-
-        public static implicit operator BaseChunk(double a)
+        public bool IsZero()
         {
-            return new BaseChunk(a, null, 1);
+            if (Var == null) return Coeff == 0 && Exp != 0;
+
+            return Coeff == 0;
         }
 
-        public static implicit operator BaseChunk(int a)
+        public bool IsConstant()
         {
-            return new BaseChunk(a, null, 1);
+            return Var == null;
         }
+
+        public bool IsNumber()
+        {
+            return IsConstant();
+        }
+
+        public bool IsSimpleNumber()
+        {
+            return IsConstant() && Exp == 1;
+        }
+
+        public double AsNumber()
+        {
+            if (!IsNumber()) throw new Exception($"Can not convert {this} to a number.");
+
+            return Math.Pow(Coeff, Exp);
+        }
+
 
     }
 }

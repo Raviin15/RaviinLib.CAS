@@ -9,7 +9,7 @@
             #region BaseChunks
             { "x",new BaseChunk("x")},
             { "2^3",new BaseChunk(2,null,3)},
-            { "2^(x+x)",new ChainChunk(1, new BaseChunk(2), new ChainChunk(1,new SumChunk(new List<IChunk>() { new BaseChunk("x"), new BaseChunk("x") }),new BaseChunk(1)))},
+            { "2^(x+x)",new ChainChunk(1, new BaseChunk(2), new SumChunk(new List<IChunk>() { new BaseChunk("x"), new BaseChunk("x") }))},
             { "(x+x)^2",new ChainChunk(1, new SumChunk(new List<IChunk>() { new BaseChunk("x"), new BaseChunk("x") }), new BaseChunk(2))},
             { "2",new BaseChunk(2)},
             { "2x",new BaseChunk(2, "x")},
@@ -66,83 +66,65 @@
 
             //{"", },
             #region ProductChunk
-            {"2*2"                              , new ProductChunk(new BaseChunk(2),new BaseChunk(2))},
+            {"2*2"                              , new BaseChunk(4)},
             {"x*x"                              , new ProductChunk(new BaseChunk("x"),new BaseChunk("x"))},
             {"x^2*x^2"                          , new ProductChunk(new BaseChunk(1,"x",2),new BaseChunk(1,"x",2))},
             {"x^2*x+x"                          , new SumChunk(new List<IChunk>(){new ProductChunk(new BaseChunk(1,"x",2),new BaseChunk("x")),new BaseChunk("x") })},
             {"(x^2)*(x+x)/((x^2)*(x+x))/x*2/2"  ,
-                new ProductChunk(
+                new ProductChunk(                    
                     new ProductChunk(
                         new ProductChunk(
-                            new ProductChunk(
-                                new ProductChunk(
-                                    new ChainChunk(
-                                        1,
-                                        new BaseChunk(1,"x",2),
-                                        new BaseChunk(1)
-                                    ),
-                                    new ChainChunk(1,
-                                        new SumChunk(new List<IChunk>(){ new BaseChunk("x"),new BaseChunk("x")}),
-                                        new BaseChunk(1)
-                                        )
-                                    ),
-                                new ChainChunk(
-                                    1,
-                                    new ChainChunk(
-                                        1,
-                                        new ProductChunk(
-                                            new ChainChunk(
-                                                1,
-                                                new BaseChunk(1,"x",2),
-                                                new BaseChunk(1)
-                                            ),
-                                            new ChainChunk(
-                                                1,
-                                                new SumChunk(new List<IChunk>(){ new BaseChunk("x"),new BaseChunk("x")}),
-                                                new BaseChunk(1)
-                                            )
-                                        ),
-                                        new BaseChunk(1)
-                                    ),
-                                    new BaseChunk(-1)
-                                )
+                                    
+                            new BaseChunk(1,"x",2),
+                                    
+                            new SumChunk(new List<IChunk>(){ new BaseChunk("x"),new BaseChunk("x")})
+                                        
                             ),
-                            new ChainChunk(
-                                1,
-                                new BaseChunk("x"),
-                                new BaseChunk(-1)
-                            )
-                        ),
-                        new BaseChunk(2)
+                        new ChainChunk(
+                            1,
+                                    
+                            new ProductChunk(
+                                            
+                                new BaseChunk(1,"x",2),
+                                            
+                                new SumChunk(new List<IChunk>(){ new BaseChunk("x"),new BaseChunk("x")})
+                                                
+                            ),                                        
+                                    
+                            new BaseChunk(-1)
+                        )
                     ),
-                    new ChainChunk(
-                        1,
-                        new BaseChunk(2),
-                        new BaseChunk(-1)
-                    )
+                            
+                    new BaseChunk(1,"x",-1)
+                            
+                     
                 ) },
             #endregion
 
             #region ChainChunk
-            {"(x)"              , new ChainChunk(1,new BaseChunk("x"),new BaseChunk(1))},
-            {"2(x)"             , new ChainChunk(2,new BaseChunk("x"),new BaseChunk(1))},
-            {"x(x)"             , new ProductChunk(new BaseChunk("x"),new ChainChunk(1,new BaseChunk("x"),new BaseChunk(1)))},
-            {"2(x)^2"           , new ChainChunk(2,new BaseChunk("x"),new BaseChunk(2))},
+            {"(x)"              , new BaseChunk("x")},
+            {"2(x)"             , new BaseChunk(2,"x")},
+            {"x(x)"             , new ProductChunk(new BaseChunk("x"),new BaseChunk("x"))},
+            {"2(x)^2"           , new BaseChunk(2,"x",2)},
             {"2(x)^x"           , new ChainChunk(2,new BaseChunk("x"),new BaseChunk("x"))},
             {"2(x)^x^x"         , new ChainChunk(2,new BaseChunk("x"),new ChainChunk(1,new BaseChunk("x"),new BaseChunk("x")))},
-            {"2(x)^(x^x)"       , new ChainChunk(2,new BaseChunk("x"),new ChainChunk(1,new ChainChunk(1,new BaseChunk("x"),new BaseChunk("x")),new BaseChunk(1)))},
+            {"2(x)^(x^x)"       , new ChainChunk(2,new BaseChunk("x"),new ChainChunk(1,new BaseChunk("x"),new BaseChunk("x")))},
             {"2(x)^2(x^x)^2"    , new ChainChunk(2,new BaseChunk("x"),new ChainChunk(2,new ChainChunk(1,new BaseChunk("x"),new BaseChunk("x")),new BaseChunk(2)))},
+            {"(2x^5)^-1"        , new BaseChunk(0.5,"x",-5)},
+            {"2(5x^5)^-1"       , new BaseChunk(0.4,"x",-5)},
+            {"(2^5)^-1"         , new BaseChunk(0.03125)},
+            {"2(5^5)^-1"        , new BaseChunk(0.00064)},
             #endregion
 
             #region SumChunk
-            {"2+2"                      , new SumChunk(new List<IChunk>(){new BaseChunk(2), new BaseChunk(2) })},
+            {"2+2"                      , new BaseChunk(4)},
             {"2+x"                      , new SumChunk(new List<IChunk>(){new BaseChunk(2), new BaseChunk("x") })},
             {"x+x"                      , new SumChunk(new List<IChunk>(){new BaseChunk("x"), new BaseChunk("x") })},
-            {"2-2"                      , new SumChunk(new List<IChunk>(){new BaseChunk(2), new BaseChunk(-2) })},
+            {"2-2"                      , new BaseChunk(0)},
             {"2-x"                      , new SumChunk(new List<IChunk>(){new BaseChunk(2), new BaseChunk(-1,"x") })},
             {"x-x"                      , new SumChunk(new List<IChunk>(){new BaseChunk("x"), new BaseChunk(-1,"x") })},
-            {"2+2+x+x-2-2-x-x+(x)-(x)"  , new SumChunk(new List<IChunk>(){new BaseChunk(2), new BaseChunk(2), new BaseChunk("x"), new BaseChunk("x"), new BaseChunk(-2) , new BaseChunk(-2), new BaseChunk(-1,"x"), new BaseChunk(-1,"x"), new ChainChunk(1,new BaseChunk("x"), new BaseChunk(1)), new ChainChunk(-1,new BaseChunk("x"), new BaseChunk(1)) })},
-            {"2+-2", new SumChunk(new List<IChunk>(){new BaseChunk(2), new BaseChunk(-2) })},
+            {"2+2+x+x-2-2-x-x+(x)-(x)"  , new SumChunk(new List<IChunk>(){new BaseChunk("x"), new BaseChunk("x"), new BaseChunk(-1,"x"), new BaseChunk(-1,"x"),new BaseChunk("x"), new BaseChunk(-1,"x") })},
+            {"2+-2"                     , new BaseChunk(0)},
             #endregion
 
             #region Scientific Notation
@@ -258,6 +240,10 @@
         [TestCase("2(x)^x^x"         )]
         [TestCase("2(x)^(x^x)"       )]
         [TestCase("2(x)^2(x^x)^2"    )]
+        [TestCase("(2x^5)^-1"        )]
+        [TestCase("2(5x^5)^-1"       )]
+        [TestCase("(2^5)^-1"         )]
+        [TestCase("2(5^5)^-1"        )]
 
         [TestCase("2+2"                      )]
         [TestCase("2+x"                      )]

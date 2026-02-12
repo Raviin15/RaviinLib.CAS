@@ -41,32 +41,34 @@ namespace RaviinLib.CAS
 
         public IChunk Derivative(string Var)
         {
-            IChunk Chunk1 = Chunk.Derivative(Var);
+            //IChunk Chunk1 = Chunk.Derivative(Var);
 
-            if (Chunk1 is BaseChunk cb && cb.Var == null && cb.Exp == 1 && cb.Coeff == 0)
-            {
-                if (Exp is BaseChunk eb && eb.Var == null && Math.Pow(eb.Coeff, eb.Exp) == 0) return new BaseChunk(Coeff);
-                return new BaseChunk(0);
-            }
+            //if (Chunk1 is BaseChunk cb && cb.Var == null && cb.Exp == 1 && cb.Coeff == 0)
+            //{
+            //    if (Exp is BaseChunk eb && eb.Var == null && Math.Pow(eb.Coeff, eb.Exp) == 0) return new BaseChunk(Coeff);
+            //    return new BaseChunk(0);
+            //}
 
-            if (Exp is BaseChunk b && b.Var == null)
+            if (Exp.IsNumber())
             {
+                var b = Exp as BaseChunk;
                 var exp = Math.Pow(b.Coeff, b.Exp);
-                if (exp - 1 == 0)
-                {
-                    Chunk1.Multiply(Coeff);
-                    return Chunk1;
-                }
 
-                ChainChunk Chunk2 = new ChainChunk(Coeff * exp, Chunk, new BaseChunk(exp - 1, null, 1));
+                //if (exp - 1 == 0)
+                //{
+                //    Chunk1.Multiply(Coeff);
+                //    return Chunk1;
+                //}
 
-                if (Chunk1 == null) return Chunk2;
+                IChunk Chunk2 = Chunker.Chain(Coeff * exp, Chunk, new BaseChunk(exp - 1));
 
-                return new ProductChunk(Chunk1, Chunk2);
+                //if (Chunk1 == null) return Chunk2;
+
+                return Chunker.Product(Chunk.Derivative(Var), Chunk2);
             }
             else
             {
-                return new ProductChunk(Copy(), new SumChunk(new List<IChunk>() { new ProductChunk(Exp.Derivative(Var), new FuncChunk(Chunk.Copy(), Functions.ln)), new ProductChunk(Exp.Copy(), new ProductChunk(Chunk.Derivative(Var), new ChainChunk(1, Chunk.Copy(), new BaseChunk(-1, null, 1)))) })) { Coeff = Coeff};
+                return Chunker.Product(Copy(), Chunker.Sum(Chunker.Product(Exp.Derivative(Var), Chunker.Func(Chunk.Copy(), Functions.ln)), Chunker.Product(Exp.Copy(), Chunker.Product(Chunk.Derivative(Var), Chunker.Chain(1, Chunk.Copy(), new BaseChunk(-1)))) ),Coeff);
 
                 //var ExpCopy = Exp.Copy();
                 //ExpCopy.Multiply(Coeff);
@@ -84,42 +86,57 @@ namespace RaviinLib.CAS
 
         public IChunk Simplified()
         {
-            if (Coeff == 0) return null;
+            // 0(f)^n => 0
+            if (Coeff == 0) return new BaseChunk(0);
 
             var expSimp = Exp.Simplified();
-            if (expSimp == null) return new BaseChunk(1, null, 1);
 
-            if (expSimp is BaseChunk g && g.Var == null)
+            // n(f)^0 => n
+            if (expSimp.IsZero()) return new BaseChunk(Coeff);
+
+            var simp = Chunk.Simplified();
+            if (simp.IsZero()) new BaseChunk(0);
+
+            // n(f)^m
+            if (expSimp.IsNumber())
             {
-                var exp = Math.Pow(g.Coeff, g.Exp);
+                var exp = (expSimp as BaseChunk).AsNumber();
 
+                // n(f)^1 => nf
                 if (exp == 1)
                 {
-                    var chunk = Chunk.Copy();
-                    chunk.Multiply(Coeff);
-
-                    return chunk.Simplified();
+                    return Chunk.MultiplyBy(Coeff).Simplified();
                 }
 
-                var simp = Chunk.Simplified();
-                if (simp == null) return null;
-
+                // n(b)^m
                 if (simp is BaseChunk b)
                 {
-                    if (b.Var != null) return new BaseChunk(Coeff * Math.Pow(b.Coeff, exp), b.Var, b.Exp * exp);
-                    else return new BaseChunk(Coeff * Math.Pow(b.Coeff, exp), null, 1);
+                    // n(c)^m => nc^m
+                    if (b.IsNumber()) return new BaseChunk(Coeff * Math.Pow(b.AsNumber(), exp));
+                    // n(x)^m => nx^m
+                    else 
+                    {
+                        //return Chunker.Base(Coeff * Math.Pow(b.Coeff, exp), b.Var, b.Exp * exp);
+
+                        var bCopy = b.Copy() as BaseChunk;
+                        bCopy.Exp *= exp;
+                        bCopy.Coeff = Math.Pow(bCopy.Coeff, exp) * Coeff;
+
+                        return bCopy;
+                    }
                 }
 
-                var ReturnVar = new ChainChunk(Coeff * Math.Pow(simp.Coeff, exp), simp, expSimp);
+                // n(f)^m => n(f)^m
+                var retCoef = Coeff * Math.Pow(simp.Coeff, exp);
                 simp.Coeff = 1;
+                var ReturnVar = Chunker.Chain(retCoef, simp, new BaseChunk(exp));
                 return ReturnVar;
             }
             else
             {
-                var simp = Chunk.Simplified();
-                if (simp == null) return null;
+                
 
-                return new ChainChunk(Coeff, simp, expSimp);
+                return Chunker.Chain(Coeff, simp, expSimp);
             }
         }
 
@@ -137,6 +154,13 @@ namespace RaviinLib.CAS
             Multiply(factor);
         }
 
+        public IChunk MultiplyBy(double factor)
+        {
+            IChunk NewChunk = Copy();
+            NewChunk.Multiply(factor);
+            return NewChunk;
+        }
+
         public double Subs(Dictionary<string, double> Values)
         {
             return Math.Pow(Chunk.Subs(Values), Exp.Subs(Values)) * Coeff;
@@ -144,7 +168,7 @@ namespace RaviinLib.CAS
 
         public IChunk Replace(Dictionary<string, IChunk> Values)
         {
-            return new ChainChunk(Coeff, Chunk.Replace(Values), Exp.Replace(Values));
+            return Chunker.Chain(Coeff, Chunk.Replace(Values), Exp.Replace(Values));
         }
 
         public IChunk Expanded()
@@ -159,11 +183,11 @@ namespace RaviinLib.CAS
 
                 if (exp is BaseChunk b) return GetExpandedWithBaseExp(b);
 
-                return new ChainChunk(Coeff, Chunk.Expanded(), exp.Expanded());
+                return Chunker.Chain(Coeff, Chunk.Expanded(), exp.Expanded());
             }
             else
             {
-                return new ChainChunk(Coeff, Chunk.Expanded(), Exp.Expanded());
+                return Chunker.Chain(Coeff, Chunk.Expanded(), Exp.Expanded());
             }
         }
 
@@ -173,9 +197,9 @@ namespace RaviinLib.CAS
 
             if (exp < 0)
             {
-                return new ChainChunk(Coeff, Chunk.Expanded(), Exp);
+                return Chunker.Chain(Coeff, Chunk.Expanded(), Exp);
             }
-            else if (exp == 0) return new BaseChunk(1, null, 1);
+            else if (exp == 0) return new BaseChunk(1);
             else if (exp == 1)
             {
                 var ReturnChunk = Chunk.Copy();
@@ -188,7 +212,7 @@ namespace RaviinLib.CAS
                 var ReturnChunk = ChunkExpanded.Copy();
                 for (int i = 1; i < exp; i++)
                 {
-                    ReturnChunk = new ProductChunk(ReturnChunk, ChunkExpanded.Copy());
+                    ReturnChunk = Chunker.Product(ReturnChunk, ChunkExpanded.Copy());
                 }
                 ((ProductChunk)ReturnChunk).Chunk2.MultiplyExpanded(Coeff);
                 return ReturnChunk;
@@ -239,6 +263,31 @@ namespace RaviinLib.CAS
         public string ToCode()
         {
             return $"new ChainChunk({Coeff},{Chunk.ToCode()},{Exp.ToCode()})";
+        }
+
+        public bool IsOne()
+        {
+            return false;
+        }
+
+        public bool IsZero()
+        {
+            return false;
+        }
+
+        public bool IsConstant()
+        {
+            return Chunk.IsConstant();
+        }
+
+        public bool IsNumber()
+        {
+            return false;
+        }
+
+        public bool IsSimpleNumber()
+        {
+            return false;
         }
     }
 }

@@ -26,53 +26,56 @@ namespace RaviinLib.CAS
 
         public IChunk Simplified()
         {
-            IChunk a = Chunk1?.Simplified();
-            IChunk b = Chunk2?.Simplified();
+            IChunk a = Chunk1.Simplified();
+            IChunk b = Chunk2.Simplified();
 
-            if (a == null || b == null)
+            if (a.IsZero() || b.IsZero())
             {
-                return null;
+                return new BaseChunk(0);
             }
 
-
-
-            double coeff = Coeff;
-            if (a is BaseChunk j && j.Var == null && b is BaseChunk k && k.Var == null)
+            if (new IChunkComparerIgnoreCoeff().Equals(a, b))
             {
-                var jVal = Math.Pow(j.Coeff,j.Exp);
-                var kVal = Math.Pow(k.Coeff, k.Exp);
-                return new BaseChunk(jVal*kVal,null,1);
+                var aCopy = a.Copy();
+                aCopy.Coeff = 1;
+                var eqCoeff = a.Coeff * b.Coeff * Coeff;
 
+                return Chunker.Chain(eqCoeff, aCopy, new BaseChunk(2));
             }
-            else if (a is BaseChunk n && n.Var == null)
+
+            if (a.IsNumber() && b.IsNumber())
             {
-                b.Multiply(Math.Pow(n.Coeff,n.Exp) * coeff);
+                return new BaseChunk((a as BaseChunk).AsNumber() * (b as BaseChunk).AsNumber());
+            }
+            else if (a.IsNumber())
+            {
+                //b.Multiply(Math.Pow(n.Coeff,n.Exp) * coeff);
                 //b.Coeff *= n.Coeff * coeff;
-                return b;
+                return b.MultiplyBy((a as BaseChunk).AsNumber() * Coeff);
             }
-            else if (b is BaseChunk m && m.Var == null)
+            else if (b.IsNumber())
             {
-                a.Multiply(Math.Pow(m.Coeff, m.Exp) * coeff);
-                return a;
+                //a.Multiply(Math.Pow(m.Coeff, m.Exp) * coeff);
+                return a.MultiplyBy((b as BaseChunk).AsNumber() * Coeff);
             }
             else if (a is BaseChunk o && b is BaseChunk p && o.Var == p.Var)
             {
                 var tmpExp = o.Exp + p.Exp;
-                var tmpCoeff = coeff * o.Coeff * p.Coeff;
-                if (tmpExp == 0) return new BaseChunk(tmpCoeff,null,1);
+                var tmpCoeff = Coeff * o.Coeff * p.Coeff;
 
-                return new BaseChunk(tmpCoeff, o.Var, tmpExp);
+                return Chunker.Base(tmpCoeff, o.Var, tmpExp);
             }
 
-            if (a is ProductChunk || b is ProductChunk || new IChunkComparerIgnoreCoeffExp().Equals(a, b))
-            {
-                return CascadeSimplify(new ProductChunk(a,b));
-            }
+            //Need to Update this!
+            //if (a is ProductChunk || b is ProductChunk)
+            //{
+            //    return CascadeSimplify(new ProductChunk(a,b));
+            //}
 
-            coeff *= a.Coeff * b.Coeff;
+            var coeff = a.Coeff * b.Coeff * Coeff;
             a.Coeff = 1;
             b.Coeff = 1;
-            var ReturnVar = new ProductChunk(a, b) { Coeff = coeff };
+            var ReturnVar = Chunker.Product(a, b, coeff);
 
             return ReturnVar;
 
@@ -96,9 +99,9 @@ namespace RaviinLib.CAS
             List<IChunk> Chain = new List<IChunk>();
             foreach (var group in ChainGroup)
             {
-                var Exp = new SumChunk(group.Select(c => c.Exp).ToList()).Simplified();
+                var Exp = Chunker.Sum(group.Select(c => c.Exp).ToList()).Simplified();
                 var Coeff = group.Select(c => c.Coeff).Aggregate((a, b) => a * b);
-                if (Exp != null) Chain.Add(new ChainChunk(Coeff, ((ChainChunk)group.Key).Chunk.Copy(),Exp));
+                if (Exp != null) Chain.Add(Chunker.Chain(Coeff, ((ChainChunk)group.Key).Chunk.Copy(),Exp));
             }
             //.Select(g => { var Chain = (ChainChunk)(g.Key.Copy()); Chain.Coeff = g.Select(c => c.Coeff).Aggregate((a, b) => a * b); Chain.Exp = new SumChunk(g.Cast<IChunk>().ToList()).Simplified() ?? new BaseChunk(0, null, 1); return Chain; })
             //.Where(c => c.Exp is BaseChunk b && b.Var == null && b.Coeff != 0); //Chain.Exp = g.Cast<ChainChunk>().Sum(c => c.Exp)
@@ -129,10 +132,10 @@ namespace RaviinLib.CAS
             List<IChunk> Func = new List<IChunk>();
             foreach (var group in FuncGroup)
             {
-                IChunk Exp = new BaseChunk(group.Count(),null,1);
+                IChunk Exp = new BaseChunk(group.Count());
                 var Coeff = group.Select(c => c.Coeff).Aggregate((a, b) => a * b);
                 var Key = (FuncChunk)group.Key;
-                Func.Add(new ChainChunk(Coeff,new FuncChunk(Key.Chunk.Copy(), Key.Function) { SecondChunk = Key.SecondChunk?.Copy() }, Exp));
+                Func.Add(Chunker.Chain(Coeff, Chunker.Func(Key.Chunk.Copy(), Key.Function, 1, Key.SecondChunk?.Copy()), Exp));
             }
 
             //Combine Simplified BaseChunks and non-BaseChunks
@@ -143,7 +146,7 @@ namespace RaviinLib.CAS
             var ReturnCoef = Chunk.Coeff * ProductChunks.Select(c => c.Coeff).Aggregate((a, b) => a * b);
             ProductChunks = ProductChunks.Select(c => { c.Coeff = 1; return c; });
             //Combine back into ProductChunk chain
-            var Aggregate = ProductChunks.Aggregate((a, b) => new ProductChunk(a, b));
+            var Aggregate = ProductChunks.Aggregate((a, b) => Chunker.Product(a, b));
             Aggregate.Coeff = ReturnCoef * CascadeCoef;
             return Aggregate;
 
@@ -183,32 +186,34 @@ namespace RaviinLib.CAS
 
         public IChunk Derivative(string Var)
         {
-            List<IChunk> Chunks = new List<IChunk>();
 
             var Chunk1Derivative = Chunk1.Derivative(Var);
             var Chunk2Derivative = Chunk2.Derivative(Var);
 
-            if (
-                (Chunk1Derivative is BaseChunk cb1 && cb1.Var == null && cb1.Exp == 1 && cb1.Coeff == 0) 
-                ||
-                (Chunk2Derivative is BaseChunk cb2 && cb2.Var == null && cb2.Exp == 1 && cb2.Coeff == 0)
-                ) return new BaseChunk(0);
+            return Chunker.Sum( Chunker.Product(Chunk1Derivative, Chunk2), Chunker.Product(Chunk1, Chunk2Derivative), Coeff );
 
-            if (Chunk1Derivative is BaseChunk b && b.Var == null && b.Exp == 1)
-            {
-                if (b.Coeff == 1) Chunks.Add(Chunk2);
-                else if (b.Coeff != 0) Chunks.Add(new ProductChunk(Chunk1Derivative, Chunk2));
-            }
-            else Chunks.Add(new ProductChunk(Chunk1Derivative, Chunk2));
+            //List<IChunk> Chunks = new List<IChunk>();
+            //if (
+            //    (Chunk1Derivative is BaseChunk cb1 && cb1.Var == null && cb1.Exp == 1 && cb1.Coeff == 0) 
+            //    ||
+            //    (Chunk2Derivative is BaseChunk cb2 && cb2.Var == null && cb2.Exp == 1 && cb2.Coeff == 0)
+            //    ) return new BaseChunk(0);
 
-            if (Chunk2Derivative is BaseChunk b2 && b2.Var == null && b2.Exp == 1)
-            {
-                if (b2.Coeff == 1) Chunks.Add(Chunk1);
-                else if (b2.Coeff != 0) Chunks.Add(new ProductChunk(Chunk1, Chunk2Derivative));
-            }
-            else Chunks.Add(new ProductChunk(Chunk1, Chunk2Derivative));
+            //if (Chunk1Derivative is BaseChunk b && b.Var == null && b.Exp == 1)
+            //{
+            //    if (b.Coeff == 1) Chunks.Add(Chunk2);
+            //    else if (b.Coeff != 0) Chunks.Add(new ProductChunk(Chunk1Derivative, Chunk2));
+            //}
+            //else Chunks.Add(new ProductChunk(Chunk1Derivative, Chunk2));
 
-            return new SumChunk(Chunks);
+            //if (Chunk2Derivative is BaseChunk b2 && b2.Var == null && b2.Exp == 1)
+            //{
+            //    if (b2.Coeff == 1) Chunks.Add(Chunk1);
+            //    else if (b2.Coeff != 0) Chunks.Add(new ProductChunk(Chunk1, Chunk2Derivative));
+            //}
+            //else Chunks.Add(new ProductChunk(Chunk1, Chunk2Derivative));
+
+            //return new SumChunk(Chunks);
         }
 
         public IChunk Copy()
@@ -229,6 +234,13 @@ namespace RaviinLib.CAS
             Coeff = 1;
         }
 
+        public IChunk MultiplyBy(double factor)
+        {
+            IChunk NewChunk = Copy();
+            NewChunk.Multiply(factor);
+            return NewChunk;
+        }
+
         public double Subs(Dictionary<string, double> Values)
         {
             return (Chunk1 != null ? Chunk1.Subs(Values) : 0) * (Chunk2 != null ? Chunk2.Subs(Values) : 0) * Coeff;
@@ -236,7 +248,7 @@ namespace RaviinLib.CAS
 
         public IChunk Replace(Dictionary<string, IChunk> Values)
         {
-            return new ProductChunk(Chunk1.Replace(Values), Chunk2.Replace(Values)) { Coeff = Coeff };
+            return Chunker.Product(Chunk1.Replace(Values), Chunk2.Replace(Values), Coeff);
         }
 
         public IChunk Expanded()
@@ -256,11 +268,11 @@ namespace RaviinLib.CAS
                         var aCopy = aChunk.Copy();
                         var bCopy = bChunk.Copy();
                         aCopy.MultiplyExpanded(Coeff);
-                        Chunks.Add(new ProductChunk(aCopy, bCopy));
+                        Chunks.Add(Chunker.Product(aCopy, bCopy));
                     }
                 }
 
-                return new SumChunk(Chunks) { Coeff = aSum.Coeff * bSum.Coeff };
+                return Chunker.Sum(Chunks, aSum.Coeff * bSum.Coeff);
             }
             else if (a is SumChunk aSum2 && b is BaseChunk bBase)
             {
@@ -271,10 +283,10 @@ namespace RaviinLib.CAS
                     var aCopy = aChunk.Copy();
                     var bCopy = bBase.Copy();
                     aCopy.MultiplyExpanded(Coeff);
-                    Chunks.Add(new ProductChunk(aCopy, bCopy));
+                    Chunks.Add(Chunker.Product(aCopy, bCopy));
                 }
 
-                return new SumChunk(Chunks);
+                return Chunker.Sum(Chunks);
             }
             else if (a is BaseChunk aBase && b is SumChunk bSum2)
             {
@@ -285,10 +297,10 @@ namespace RaviinLib.CAS
                     var bCopy = bChunk.Copy();
                     var aCopy = aBase.Copy();
                     bCopy.MultiplyExpanded(Coeff);
-                    Chunks.Add(new ProductChunk(bCopy, aCopy));
+                    Chunks.Add(Chunker.Product(bCopy, aCopy));
                 }
 
-                return new SumChunk(Chunks);
+                return Chunker.Sum(Chunks);
             }
             else if (a is SumChunk aSum3 && b is ProductChunk bProd)
             {
@@ -299,10 +311,10 @@ namespace RaviinLib.CAS
                     var aCopy = aChunk.Copy();
                     var bCopy = bProd.Copy();
                     aCopy.MultiplyExpanded(Coeff);
-                    Chunks.Add(new ProductChunk(aCopy, bCopy));
+                    Chunks.Add(Chunker.Product(aCopy, bCopy));
                 }
 
-                return new SumChunk(Chunks);
+                return Chunker.Sum(Chunks);
             }
             else if (a is ProductChunk aProd && b is SumChunk bSum3)
             {
@@ -313,15 +325,15 @@ namespace RaviinLib.CAS
                     var bCopy = bChunk.Copy();
                     var aCopy = aProd.Copy();
                     bCopy.MultiplyExpanded(Coeff);
-                    Chunks.Add(new ProductChunk(bCopy, aCopy));
+                    Chunks.Add(Chunker.Product(bCopy, aCopy));
                 }
 
-                return new SumChunk(Chunks);
+                return Chunker.Sum(Chunks);
             }
 
 
             a.Multiply(Coeff);
-            return new ProductChunk(a, b);
+            return Chunker.Product(a, b);
 
 
 
@@ -391,6 +403,30 @@ namespace RaviinLib.CAS
         public string ToCode()
         {
             return $"new ProductChunk({Chunk1.ToCode()},{Chunk2.ToCode()})";
+        }
+
+        public bool IsOne()
+        {
+            return false;
+        }
+
+        public bool IsZero()
+        {
+            return false;
+        }
+
+        public bool IsConstant()
+        {
+            return Chunk1.IsConstant() && Chunk2.IsConstant();
+        }
+        public bool IsNumber()
+        {
+            return false;
+        }
+
+        public bool IsSimpleNumber()
+        {
+            return false;
         }
     }
 }

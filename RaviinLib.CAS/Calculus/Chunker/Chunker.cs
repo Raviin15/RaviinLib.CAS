@@ -1,4 +1,5 @@
 ﻿
+using MathNet.Numerics;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -105,9 +106,11 @@ namespace RaviinLib.CAS
             'à', 'ä', 'â',
             'é', 'ü', 'Ç'
         };
-        
+
 
         #endregion
+
+        #region Chunkify
 
         public static IChunk Chunckify(string Fx)
         {
@@ -331,7 +334,7 @@ namespace RaviinLib.CAS
                     var slice = Fx.Slice(start, length); // one alloc per term
                     chunks.Add(SubChunk(slice));
                 }
-                return new SumChunk(chunks);
+                return Chunker.Sum(chunks);
             }
 
             var p = CheckProdChunk(Fx, ProductSubstrings, ProdLastSign);
@@ -351,9 +354,9 @@ namespace RaviinLib.CAS
 
                     if (!p.Substrings[i-1].IsNextQuotient)
                     {
-                        Prod = new ProductChunk(Prod, chunk);
+                        Prod = Chunker.Product(Prod, chunk);
                     }
-                    else Prod = new ProductChunk(Prod, new ChainChunk(1, chunk, new BaseChunk(-1, null, 1)));
+                    else Prod = Chunker.Product(Prod, Chunker.Chain(1, chunk, new BaseChunk(-1)));
                 }
 
                 return Prod;
@@ -376,10 +379,10 @@ namespace RaviinLib.CAS
                     {
                         if (Exp != 1)
                         {
-                            return new ChainChunk(Coeff, new FuncChunk(SubChunk(Fx.Slice(f.Substrings.Chunk.Start, f.Substrings.Chunk.Length)), f.Substrings.Func) { SecondChunk = SecondChunk }, new BaseChunk(Exp, null, 1));
+                            return Chunker.Chain(Coeff, Chunker.Func(SubChunk(Fx.Slice(f.Substrings.Chunk.Start, f.Substrings.Chunk.Length)), f.Substrings.Func,1, SecondChunk), new BaseChunk(Exp));
                         }
 
-                        return new FuncChunk(SubChunk(Fx.Slice(f.Substrings.Chunk.Start, f.Substrings.Chunk.Length)), f.Substrings.Func, Coeff) { SecondChunk = SecondChunk };
+                        return Chunker.Func(SubChunk(Fx.Slice(f.Substrings.Chunk.Start, f.Substrings.Chunk.Length)), f.Substrings.Func, Coeff, SecondChunk);
                     }
                     else
                     {
@@ -387,10 +390,10 @@ namespace RaviinLib.CAS
 
                         if (Exp != 1)
                         {
-                            return new ProductChunk(ICoeff, new ChainChunk(1, new FuncChunk(SubChunk(Fx.Slice(f.Substrings.Chunk.Start, f.Substrings.Chunk.Length)), f.Substrings.Func) { SecondChunk = SecondChunk }, new BaseChunk(Exp, null, 1)));
+                            return Chunker.Product(ICoeff, Chunker.Chain(1, Chunker.Func(SubChunk(Fx.Slice(f.Substrings.Chunk.Start, f.Substrings.Chunk.Length)), f.Substrings.Func, 1, SecondChunk) , new BaseChunk(Exp)));
                         }
 
-                        return new ProductChunk(ICoeff, new FuncChunk(SubChunk(Fx.Slice(f.Substrings.Chunk.Start, f.Substrings.Chunk.Length)), f.Substrings.Func) { SecondChunk = SecondChunk });
+                        return Chunker.Product(ICoeff, Chunker.Func(SubChunk(Fx.Slice(f.Substrings.Chunk.Start, f.Substrings.Chunk.Length)), f.Substrings.Func, 1, SecondChunk));
                         
                     }
                 }
@@ -400,13 +403,13 @@ namespace RaviinLib.CAS
                     
                     if (double.TryParse(coeffStr, out double Coeff))
                     {
-                        return new ChainChunk(Coeff, new FuncChunk(SubChunk(Fx.Slice(f.Substrings.Chunk.Start, f.Substrings.Chunk.Length)), f.Substrings.Func) { SecondChunk = SecondChunk }, IExp);
+                        return Chunker.Chain(Coeff, Chunker.Func(SubChunk(Fx.Slice(f.Substrings.Chunk.Start, f.Substrings.Chunk.Length)), f.Substrings.Func, 1, SecondChunk), IExp);
                     }
                     else
                     {
                         IChunk ICoeff = SubChunk(coeffStr.AsSpan());
 
-                        return new ProductChunk(ICoeff, new ChainChunk(1, new FuncChunk(SubChunk(Fx.Slice(f.Substrings.Chunk.Start, f.Substrings.Chunk.Length)), f.Substrings.Func) { SecondChunk = SecondChunk }, IExp));
+                        return Chunker.Product(ICoeff, Chunker.Chain(1, Chunker.Func(SubChunk(Fx.Slice(f.Substrings.Chunk.Start, f.Substrings.Chunk.Length)), f.Substrings.Func, 1, SecondChunk), IExp));
                     }
                 }
 
@@ -427,7 +430,7 @@ namespace RaviinLib.CAS
                     IChunk Exp = SubChunk(expStr.AsSpan());
                     //double Exp = double.Parse(ch.Substrings.Exp);
 
-                    return new ChainChunk(Coeff, SubChunk(Fx.Slice(ch.Substrings.Chunk.Start, ch.Substrings.Chunk.Length)), Exp);
+                    return Chunker.Chain(Coeff, SubChunk(Fx.Slice(ch.Substrings.Chunk.Start, ch.Substrings.Chunk.Length)), Exp);
                 }
                 else
                 {
@@ -436,7 +439,7 @@ namespace RaviinLib.CAS
                         IChunk ICoeff = SubChunk(coeffStr.AsSpan());
                         IChunk Exp = SubChunk(expStr.AsSpan());
 
-                        return new ProductChunk(ICoeff,new ChainChunk(1, SubChunk(Fx.Slice(ch.Substrings.Chunk.Start, ch.Substrings.Chunk.Length)), Exp));
+                        return Chunker.Product(ICoeff, Chunker.Chain(1, SubChunk(Fx.Slice(ch.Substrings.Chunk.Start, ch.Substrings.Chunk.Length)), Exp));
                     }
                     catch (Exception)
                     {
@@ -585,7 +588,7 @@ namespace RaviinLib.CAS
                     if (double.TryParse(right.ToString(), out double numExp))
                     {
                         // a^b
-                        b = new BaseChunk(numCoeff, null, numExp);
+                        b = Chunker.Base(numCoeff, null, numExp);
                         return true;
                     }
                     else
@@ -594,7 +597,7 @@ namespace RaviinLib.CAS
                         try
                         {
                             IChunk expChunk = SubChunk(right);
-                            b = new ChainChunk(1, new BaseChunk(numCoeff, null, 1), expChunk);
+                            b = Chunker.Chain(1, new BaseChunk(numCoeff), expChunk);
                             return true;
                         }
                         catch
@@ -624,7 +627,7 @@ namespace RaviinLib.CAS
                     if (double.TryParse(right.ToString(), out double numExp))
                     {
                         // ()^b
-                        b = new BaseChunk(coeff, varName, numExp);
+                        b = Chunker.Base(coeff, varName, numExp);
                         return true;
                     }
                     else
@@ -633,7 +636,7 @@ namespace RaviinLib.CAS
                         try
                         {
                             IChunk expChunk = SubChunk(right);
-                            b = new ChainChunk(1, new BaseChunk(coeff, varName, 1), expChunk);
+                            b = Chunker.Chain(1, Chunker.Base(coeff, varName, 1), expChunk);
                             return true;
                         }
                         catch
@@ -651,14 +654,14 @@ namespace RaviinLib.CAS
                 // a
                 if (double.TryParse(Fx.ToString(), out double num))
                 {
-                    b = new BaseChunk(num, null, 1);
+                    b = new BaseChunk(num);
                     return true;
                 }
             }
             else if (varIndex == 0)
             {
                 // x
-                b = new BaseChunk(1, Fx.ToString(), 1);
+                b = Chunker.Base(1, Fx.ToString(), 1);
                 return true;
             }
             else
@@ -669,11 +672,206 @@ namespace RaviinLib.CAS
                     return false;
 
                 string varName = Fx.Slice(varIndex).ToString();
-                b = new BaseChunk(coeff, varName, 1);
+                b = Chunker.Base(coeff, varName, 1);
                 return true;
             }
 
             return false;
         }
+
+        #endregion
+
+        #region Smart Constructors
+
+        public static IChunk Product(IChunk a, IChunk b, double Coeff = 1)
+        {
+            if (a.IsZero() || b.IsZero() || a.Coeff == 0 || b.Coeff == 0) return new BaseChunk(0);
+
+            if (a.IsOne()) return b.MultiplyBy(Coeff);
+            if (b.IsOne()) return a.MultiplyBy(Coeff);
+
+            if (a.IsNumber() && b.IsNumber())
+            {
+                BaseChunk ba = (BaseChunk)a;
+                BaseChunk bb = (BaseChunk)b;
+
+                return new BaseChunk(Math.Pow(ba.Coeff,ba.Exp) * Math.Pow(bb.Coeff, bb.Exp) * Coeff);
+            }
+
+            if (a.IsNumber())
+            {
+                return b.MultiplyBy((a as BaseChunk).AsNumber());
+            }
+            if (b.IsNumber())
+            {
+                return a.MultiplyBy((b as BaseChunk).AsNumber());
+            }
+
+            IChunk aCopy = a.Copy();
+            IChunk bCopy = b.Copy();
+
+            Coeff *= aCopy.Coeff * bCopy.Coeff;
+            aCopy.Coeff = 1;
+            bCopy.Coeff = 1;
+
+            return new ProductChunk(aCopy, bCopy) { Coeff = Coeff };
+        }
+
+        public static IChunk Sum(IChunk a, IChunk b, double Coeff = 1)
+        {
+            if (a.IsZero() || a.Coeff == 0) return b.MultiplyBy(Coeff);
+            if (b.IsZero() || b.Coeff == 0) return a.MultiplyBy(Coeff);
+
+            var allChunks = GetChunksOf(a).Concat(GetChunksOf(b));
+
+            var numbers = new List<BaseChunk>();
+            var others = new List<IChunk>();
+
+            foreach (var c in allChunks)
+            {
+                if (c.IsNumber())
+                {
+                    numbers.Add((BaseChunk)c);
+                }
+                else
+                {
+                    others.Add(c);
+                }
+            }
+
+            double numSum = 0;
+            foreach (var c in numbers)
+            {
+                numSum += Math.Pow(c.Coeff, c.Exp);
+            }
+
+            if (others.Count == 0)
+            {
+                return new BaseChunk(numSum).MultiplyBy(Coeff);
+            }
+
+            if (numSum == 0)
+            {
+                if (others.Count == 1) return others[0];
+                return new SumChunk(others).MultiplyBy(Coeff);
+            }
+
+            others.Add(new BaseChunk(numSum));
+
+            return new SumChunk(others).MultiplyBy(Coeff);
+        }
+
+        public static IChunk Sum(List<IChunk> Chunks, double Coeff = 1)
+        {
+            if (Chunks.Count == 0) return new BaseChunk(0);
+            if (Chunks.Count == 1) return Chunks[0].MultiplyBy(Coeff);
+
+            var allChunks = Chunks.SelectMany(c => GetChunksOf(c));
+
+            var numbers = new List<BaseChunk>();
+            var others = new List<IChunk>();
+            foreach (var Chunk in allChunks)
+            {
+                if (Chunk.IsZero() || Chunk.Coeff == 0)
+                {
+                    continue;
+                }
+                else if (Chunk.IsNumber())
+                {
+                    numbers.Add((BaseChunk)Chunk);
+                }
+                else
+                {
+                    others.Add(Chunk);
+                }
+            }
+
+            double numSum = 0;
+            foreach (var c in numbers)
+            {
+                numSum += Math.Pow(c.Coeff, c.Exp);
+            }
+
+            if (others.Count == 0)
+            {
+                return new BaseChunk(numSum).MultiplyBy(Coeff);
+            }
+
+            if (numSum == 0)
+            {
+                if (others.Count == 1) return others[0];
+                return new SumChunk(others).MultiplyBy(Coeff);
+            }
+
+            others.Add(new BaseChunk(numSum));
+
+            return new SumChunk(others).MultiplyBy(Coeff);
+        }
+
+        public static IChunk Chain(double Coeff, IChunk Chunk, IChunk Exp)
+        {
+            if (Coeff == 0) return new BaseChunk(0);
+
+            if (Exp.IsOne()) return Chunk.MultiplyBy(Coeff);
+
+            if (Exp.IsZero()) return new BaseChunk(Coeff);
+
+            if (Chunk is BaseChunk b && Exp.IsNumber())
+            {
+                if (b.IsNumber())
+                {
+                    return new BaseChunk(Coeff * Math.Pow(b.AsNumber(),(Exp as BaseChunk).AsNumber()));
+                }
+                else
+                {
+                    var bCopy = b.Copy() as BaseChunk;
+                    var BaseExpVal = (Exp as BaseChunk).AsNumber();
+                    bCopy.Exp *= BaseExpVal;
+                    bCopy.Coeff = Math.Pow(bCopy.Coeff, BaseExpVal) * Coeff;
+
+                    return bCopy;
+                }
+
+            }
+
+            IChunk newExp = Exp.Copy();
+            if (Exp.IsNumber() && !Exp.IsSimpleNumber())
+            {
+                newExp = new BaseChunk((Exp as BaseChunk).AsNumber());
+            }
+
+            return new ChainChunk(Coeff, Chunk, newExp);
+        }
+
+        public static IChunk Func( IChunk Chunk, Functions Func, double Coeff = 1, IChunk SecondChunk = null)
+        {
+            if (Coeff == 0) return new BaseChunk(0);
+
+            return new FuncChunk(Chunk, Func, Coeff) { SecondChunk = SecondChunk };
+        }
+
+        public static IChunk Base(double Coeff, string Var, double Exp)
+        {
+            if (Coeff == 0) return new BaseChunk(0);
+
+            if (Exp == 0 && Var == null) return new BaseChunk(1);
+
+            if (Exp == 0 && Var != null) return new BaseChunk(Coeff);
+
+            return new BaseChunk(Coeff, Var, Exp);
+        }
+
+
+        public static IEnumerable<IChunk> GetChunksOf(IChunk c)
+        {
+            if (c is SumChunk s)
+            {
+                return s.Chunks.Select(cp => cp.MultiplyBy(s.Coeff)).ToList();
+            }
+            return new[] { c };
+        }
+        #endregion
+
+
     }
 }
