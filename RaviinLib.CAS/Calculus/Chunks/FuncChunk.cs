@@ -268,10 +268,7 @@ namespace RaviinLib.CAS
         {
             Coeff *= factor;
         }
-        public void MultiplyExpanded(double factor)
-        {
-            Multiply(factor);
-        }
+        
 
         public IChunk MultiplyBy(double factor)
         {

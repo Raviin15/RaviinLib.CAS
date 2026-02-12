@@ -6,12 +6,13 @@ namespace RaviinLib.CAS
 {
     public class SumChunk: IChunk
     {
-        public double Coeff { get; set; } = 1;
+        public double Coeff { get; set; }
         public List<IChunk> Chunks { get; set; }
 
-        public SumChunk(List<IChunk> Chunks)
+        public SumChunk(List<IChunk> Chunks, double Coeff = 1)
         {
             this.Chunks = Chunks;
+            this.Coeff = Coeff;
         }
 
         public IChunk Derivative(string Var)
@@ -52,13 +53,14 @@ namespace RaviinLib.CAS
             //    chunk.Multiply(factor);
             //}
         }
-        public void MultiplyExpanded(double factor)
-        {
-            foreach (var chunk in Chunks)
-            {
-                chunk.MultiplyExpanded(factor);
-            }
-        }
+
+        //public void MultiplyExpanded(double factor)
+        //{
+        //    foreach (var chunk in Chunks)
+        //    {
+        //        chunk.MultiplyExpanded(factor);
+        //    }
+        //}
 
         public IChunk MultiplyBy(double factor)
         {
@@ -71,7 +73,7 @@ namespace RaviinLib.CAS
         {
             //var Copy = CascadeSimplify(this);
 
-            var AllChunks = Chunks.SelectMany(c => Chunker.GetChunksOf(c)).Select(c => c.Simplified());
+            var AllChunks = Chunks.SelectMany(c => Chunker.SumGetChunksOf(c)).Select(c => c.Simplified());
 
             #region Old
 
@@ -152,7 +154,6 @@ namespace RaviinLib.CAS
                 }
             }
 
-            #region Base
 
             List<IChunk> Base = BaseChunks
                 .GroupBy(c => c, new IChunkComparerIgnoreCoeff())
@@ -161,20 +162,19 @@ namespace RaviinLib.CAS
 
             List<IChunk> Chain = ChainChunks
                 .GroupBy(c => c, new IChunkComparerIgnoreCoeff())
-                .Select(g => Chunker.Chain(g.Sum(c => c.Coeff), (g.Key as ChainChunk).Chunk, (g.Key as ChainChunk).Exp))
+                .Select(g => Chunker.Chain(g.Sum(c => c.Coeff), (g.Key as ChainChunk).Chunk.Copy(), (g.Key as ChainChunk).Exp.Copy()))
                 .ToList();
 
             List<IChunk> Func = FuncChunks
                 .GroupBy(c => c, new IChunkComparerIgnoreCoeff())
-                .Select(g => Chunker.Func((g.Key as FuncChunk).Chunk, (g.Key as FuncChunk).Function, g.Sum(c => c.Coeff), (g.Key as FuncChunk).SecondChunk))
+                .Select(g => Chunker.Func((g.Key as FuncChunk).Chunk.Copy(), (g.Key as FuncChunk).Function, g.Sum(c => c.Coeff), (g.Key as FuncChunk).SecondChunk.Copy()))
                 .ToList();
 
             List<IChunk> Product = ProductChunks
                 .GroupBy(c => c, new IChunkComparerIgnoreCoeff())
-                .Select(g => Chunker.Product((g.Key as ProductChunk).Chunk1, (g.Key as ProductChunk).Chunk2, g.Sum(c => c.Coeff)))
+                .Select(g => Chunker.Product((g.Key as ProductChunk).Chunks.Select(c => c.Copy()).ToList(), g.Sum(c => c.Coeff)))
                 .ToList();
 
-            #endregion
 
 
 
@@ -248,18 +248,19 @@ namespace RaviinLib.CAS
             foreach (var chunk in Chunks)
             {
                 var Expanded = chunk.Expanded();
-                if (Expanded != null)
-                {
-                    if (Expanded is SumChunk s)
-                    {
-                        s.MultiplyExpanded(s.Coeff);
-                        newChunks.AddRange(s.Chunks);
-                    }
-                    else newChunks.Add(Expanded);
+                //if (Expanded != null)
+                //{
+                //    if (Expanded is SumChunk s)
+                //    {
+                //        s.MultiplyExpanded(s.Coeff);
+                //        newChunks.AddRange(s.Chunks);
+                //    }
+                //    else newChunks.Add(Expanded);
 
-                }
+                //}
+                newChunks.Add(Expanded);
             }
-            if (newChunks.Count == 1) return newChunks[0];
+            //if (newChunks.Count == 1) return newChunks[0];
 
             return Chunker.Sum(newChunks, Coeff);
         }
@@ -304,7 +305,7 @@ namespace RaviinLib.CAS
 
         public string ToCode()
         {
-            return $"new SumChunk(new List<IChunk>(){{{string.Join(",",Chunks.Select(c => c.ToCode()))}}})";
+            return $"new SumChunk(new List<IChunk>(){{{string.Join(",",Chunks.Select(c => c.ToCode()))}}}, {Coeff})";
         }
 
         public bool IsOne()

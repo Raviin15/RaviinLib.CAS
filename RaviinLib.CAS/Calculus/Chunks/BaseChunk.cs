@@ -85,12 +85,18 @@ namespace RaviinLib.CAS
 
         public void Multiply(double factor)
         {
-            Coeff *= factor;
+            if (Var == null)
+            {
+                if (Exp == 1) Coeff *= factor;
+                else
+                {
+                    Coeff = AsNumber() * factor;
+                    Exp = 1;
+                }
+            }
+            else Coeff *= factor;
         }
-        public void MultiplyExpanded(double factor)
-        {
-            Multiply(factor);
-        }
+        
 
         public IChunk MultiplyBy(double factor)
         {
@@ -128,13 +134,20 @@ namespace RaviinLib.CAS
                 BaseChunk BaseCopy = Copy() as BaseChunk;
                 BaseCopy.Exp = 1;
                 BaseCopy.Coeff = 1;
-                IChunk ReturnChunk = BaseCopy;
-                for (int i = 1; i < Exp; i++)
+                List<IChunk> retChunks = new List<IChunk>() {};
+                for (int i = 0; i < Exp; i++)
                 {
-                    ReturnChunk = Chunker.Product(ReturnChunk, BaseCopy.Copy());
+                    retChunks.Add(BaseCopy.Copy());
                 }
-                ((ProductChunk)ReturnChunk).Chunk2.MultiplyExpanded(Coeff);
-                return ReturnChunk.Expanded();
+                return Chunker.Product(retChunks, Coeff);
+
+                //IChunk ReturnChunk = BaseCopy;
+                //for (int i = 1; i < Exp; i++)
+                //{
+                //    ReturnChunk = Chunker.Product(ReturnChunk, BaseCopy.Copy());
+                //}
+                //((ProductChunk)ReturnChunk).Chunk2.MultiplyExpanded(Coeff);
+                //return ReturnChunk.Expanded();
             }
         }
 

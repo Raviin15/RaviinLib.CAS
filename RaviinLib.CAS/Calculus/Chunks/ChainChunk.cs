@@ -149,10 +149,7 @@ namespace RaviinLib.CAS
         {
             Coeff *= factor;
         }
-        public void MultiplyExpanded(double factor)
-        {
-            Multiply(factor);
-        }
+        
 
         public IChunk MultiplyBy(double factor)
         {
@@ -173,51 +170,69 @@ namespace RaviinLib.CAS
 
         public IChunk Expanded()
         {
-            if (Exp is BaseChunk g && g.Var == null)
+            if (Exp.IsNumber())
             {
-                return GetExpandedWithBaseExp(g);
-            }
-            else if (Exp is ChainChunk c)
-            {
-                var exp = c.Expanded().Simplified();
+                double LoopCount = (Exp as BaseChunk).AsNumber();
+                if (LoopCount % 1 != 0) return Chunker.Chain(Coeff, Chunk.Expanded(), Exp.Expanded());
 
-                if (exp is BaseChunk b) return GetExpandedWithBaseExp(b);
 
-                return Chunker.Chain(Coeff, Chunk.Expanded(), exp.Expanded());
-            }
-            else
-            {
-                return Chunker.Chain(Coeff, Chunk.Expanded(), Exp.Expanded());
-            }
-        }
+                IChunk copy = Chunk.Expanded();
 
-        private IChunk GetExpandedWithBaseExp(BaseChunk g)
-        {
-            var exp = Math.Pow(g.Coeff, g.Exp);
-
-            if (exp < 0)
-            {
-                return Chunker.Chain(Coeff, Chunk.Expanded(), Exp);
-            }
-            else if (exp == 0) return new BaseChunk(1);
-            else if (exp == 1)
-            {
-                var ReturnChunk = Chunk.Copy();
-                ReturnChunk.MultiplyExpanded(Coeff);
-                return ReturnChunk.Expanded();
-            }
-            else
-            {
-                var ChunkExpanded = Chunk.Expanded();
-                var ReturnChunk = ChunkExpanded.Copy();
-                for (int i = 1; i < exp; i++)
+                List<IChunk> retChunks = new List<IChunk>();
+                for (int i = 0; i < LoopCount; i++)
                 {
-                    ReturnChunk = Chunker.Product(ReturnChunk, ChunkExpanded.Copy());
+                    retChunks.Add(copy.Copy());
                 }
-                ((ProductChunk)ReturnChunk).Chunk2.MultiplyExpanded(Coeff);
-                return ReturnChunk;
+                return Chunker.Product(retChunks, Coeff);
             }
+            return Chunker.Chain(Coeff, Chunk.Expanded(), Exp.Expanded());
+
+
+            //if (Exp is BaseChunk g && g.Var == null)
+            //{
+            //    return GetExpandedWithBaseExp(g);
+            //}
+            //else if (Exp is ChainChunk c)
+            //{
+            //    var exp = c.Expanded().Simplified();
+
+            //    if (exp is BaseChunk b) return GetExpandedWithBaseExp(b);
+
+            //    return Chunker.Chain(Coeff, Chunk.Expanded(), exp.Expanded());
+            //}
+            //else
+            //{
+            //    return Chunker.Chain(Coeff, Chunk.Expanded(), Exp.Expanded());
+            //}
         }
+
+        //private IChunk GetExpandedWithBaseExp(BaseChunk g)
+        //{
+        //    var exp = Math.Pow(g.Coeff, g.Exp);
+
+        //    if (exp < 0)
+        //    {
+        //        return Chunker.Chain(Coeff, Chunk.Expanded(), Exp);
+        //    }
+        //    else if (exp == 0) return new BaseChunk(1);
+        //    else if (exp == 1)
+        //    {
+        //        var ReturnChunk = Chunk.Copy();
+        //        ReturnChunk.MultiplyExpanded(Coeff);
+        //        return ReturnChunk.Expanded();
+        //    }
+        //    else
+        //    {
+        //        var ChunkExpanded = Chunk.Expanded();
+        //        var ReturnChunk = ChunkExpanded.Copy();
+        //        for (int i = 1; i < exp; i++)
+        //        {
+        //            ReturnChunk = Chunker.Product(ReturnChunk, ChunkExpanded.Copy());
+        //        }
+        //        ((ProductChunk)ReturnChunk).Chunk2.MultiplyExpanded(Coeff);
+        //        return ReturnChunk;
+        //    }
+        //}
 
         public string ToLatex()
         {

@@ -20,7 +20,22 @@ namespace RaviinLib.CAS
 
             if (a is ProductChunk pa && b is ProductChunk pb)
             {
-                return ((Comp.Equals(pa.Chunk1, pb.Chunk1)) && (Comp.Equals(pa.Chunk2, pb.Chunk2)) || (Comp.Equals(pa.Chunk1, pb.Chunk2)) && (Comp.Equals(pa.Chunk2, pb.Chunk1)));
+                if (pa.Chunks.Count != pb.Chunks.Count) return false;
+
+                // Order-insensitive comparison of chunk sets
+                var aChunksGrouped = pa.Chunks.GroupBy(x => x, this);
+                var bChunksGrouped = pb.Chunks.GroupBy(x => x, this);
+
+                foreach (var groupA in aChunksGrouped)
+                {
+                    int countA = groupA.Count();
+                    int countB = bChunksGrouped.FirstOrDefault(g => Comp.Equals(g.Key, groupA.Key))?.Count() ?? -1;
+                    if (countA != countB)
+                        return false;
+                }
+
+                return true;
+                //return ((Comp.Equals(pa.Chunk1, pb.Chunk1)) && (Comp.Equals(pa.Chunk2, pb.Chunk2)) || (Comp.Equals(pa.Chunk1, pb.Chunk2)) && (Comp.Equals(pa.Chunk2, pb.Chunk1)));
             }
             else if (a is ChainChunk ca && b is ChainChunk cb)
             {
@@ -65,11 +80,13 @@ namespace RaviinLib.CAS
             {
                 case ProductChunk p:
                     {
-                        int h1 = GetHashCode(p.Chunk1);
-                        int h2 = GetHashCode(p.Chunk2);
-                        int minHash = Math.Min(h1, h2);
-                        int maxHash = Math.Max(h1, h2);
-                        return HashCode.Combine(minHash, maxHash);
+                        var chunkHashes = p.Chunks.Select(GetHashCode).OrderBy(h => h);
+                        return chunkHashes.Aggregate(0, (acc, h) => HashCode.Combine(acc, h));
+                        //int h1 = GetHashCode(p.Chunk1);
+                        //int h2 = GetHashCode(p.Chunk2);
+                        //int minHash = Math.Min(h1, h2);
+                        //int maxHash = Math.Max(h1, h2);
+                        //return HashCode.Combine(minHash, maxHash);
                     }
 
                 case ChainChunk c:

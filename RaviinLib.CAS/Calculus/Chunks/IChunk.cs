@@ -23,7 +23,7 @@ namespace RaviinLib.CAS
         /// <param name="factor"></param>
         IChunk MultiplyBy(double factor);
 
-        void MultiplyExpanded(double factor);
+        //void MultiplyExpanded(double factor);
         double Subs(Dictionary<string, double> Values);
         IChunk Replace(Dictionary<string, IChunk> Values);
 

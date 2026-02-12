@@ -22,16 +22,28 @@ namespace RaviinLib.CAS
                 case FuncChunk f1 when b is FuncChunk f2:
                     return (f1.Coeff == f2.Coeff) && (f1.Function == f2.Function) && Equals(f1.Chunk, f2.Chunk) && ((f1.SecondChunk == null && f2.SecondChunk == null) || Equals(f1.SecondChunk, f2.SecondChunk));
                 case ProductChunk p1 when b is ProductChunk p2:
-                    return (p1.Coeff == p2.Coeff) && ((Equals(p1.Chunk1, p2.Chunk1)) && (Equals(p1.Chunk2, p2.Chunk2)) || (Equals(p1.Chunk1, p2.Chunk2)) && (Equals(p1.Chunk2, p2.Chunk1)));
+                    if (p1.Coeff != p2.Coeff || p1.Chunks.Count != p2.Chunks.Count) return false;
+                    // Order-insensitive comparison of chunk sets
+                    var paChunksGrouped = p1.Chunks.GroupBy(x => x, this);
+                    var pbChunksGrouped = p2.Chunks.GroupBy(x => x, this);
+                    foreach (var groupA in paChunksGrouped)
+                    {
+                        int countA = groupA.Count();
+                        int countB = pbChunksGrouped.FirstOrDefault(g => Equals(g.Key, groupA.Key))?.Count() ?? -1;
+                        if (countA != countB)
+                            return false;
+                    }
+                    return true;
+                //return (p1.Coeff == p2.Coeff) && ((Equals(p1.Chunk1, p2.Chunk1)) && (Equals(p1.Chunk2, p2.Chunk2)) || (Equals(p1.Chunk1, p2.Chunk2)) && (Equals(p1.Chunk2, p2.Chunk1)));
                 case SumChunk s1 when b is SumChunk s2:
                     if (s1.Coeff != s2.Coeff || s1.Chunks.Count != s2.Chunks.Count) return false;
                     // Order-insensitive comparison of chunk sets
-                    var aChunksGrouped = s1.Chunks.GroupBy(x => x, this);
-                    var bChunksGrouped = s2.Chunks.GroupBy(x => x, this);
-                    foreach (var groupA in aChunksGrouped)
+                    var saChunksGrouped = s1.Chunks.GroupBy(x => x, this);
+                    var sbChunksGrouped = s2.Chunks.GroupBy(x => x, this);
+                    foreach (var groupA in saChunksGrouped)
                     {
                         int countA = groupA.Count();
-                        int countB = bChunksGrouped.FirstOrDefault(g => Equals(g.Key, groupA.Key))?.Count() ?? -1;
+                        int countB = sbChunksGrouped.FirstOrDefault(g => Equals(g.Key, groupA.Key))?.Count() ?? -1;
                         if (countA != countB)
                             return false;
                     }
