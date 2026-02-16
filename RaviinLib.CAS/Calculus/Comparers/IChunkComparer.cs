@@ -27,7 +27,7 @@ namespace RaviinLib.CAS
                 foreach (var groupA in aChunksGrouped)
                 {
                     int countA = groupA.Count();
-                    int countB = bChunksGrouped.FirstOrDefault(g => Equals(g.Key, groupA.Key))?.Count() ?? -1;
+                    int countB = bChunksGrouped.FirstOrDefault(g => new IChunkComparer().Equals(g.Key, groupA.Key))?.Count() ?? -1;
                     if (countA != countB)
                         return false;
                 }
@@ -50,7 +50,7 @@ namespace RaviinLib.CAS
                 foreach (var groupA in aChunksGrouped)
                 {
                     int countA = groupA.Count();
-                    int countB = bChunksGrouped.FirstOrDefault(g => Equals(g.Key, groupA.Key))?.Count() ?? -1;
+                    int countB = bChunksGrouped.FirstOrDefault(g => new IChunkComparer().Equals(g.Key, groupA.Key))?.Count() ?? -1;
                     if (countA != countB)
                         return false;
                 }

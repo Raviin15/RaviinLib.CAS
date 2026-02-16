@@ -36,75 +36,39 @@ namespace RaviinLib.CAS
 
         public IChunk Simplified()
         {
-            var AllChunks = Chunks.SelectMany(c => Chunker.ProductGetChunksOf(c)).Select(c => c.Simplified());
+            return Chunker.Product(SimplificationLogic(Chunks), Coeff);
 
-            List<BaseChunk> BaseChunks = new List<BaseChunk>();
-            List<ChainChunk> ChainChunks = new List<ChainChunk>();
-            List<FuncChunk> FuncChunks = new List<FuncChunk>();
-            List<SumChunk> SumChunks = new List<SumChunk>();
+            //var PrevChunks = Chunks;
+            //while (true)
+            //{
+            //    var returnchunks = SimplificationLogic(PrevChunks);
 
+            //    if (PrevChunks.Count != returnchunks.Count)
+            //    {
+            //        PrevChunks = returnchunks;
+            //        continue;
+            //    }
+            //    // Order-insensitive comparison of chunk sets
+            //    var saChunksGrouped = PrevChunks.GroupBy(x => x, new IChunkComparer());
+            //    var sbChunksGrouped = returnchunks.GroupBy(x => x, new IChunkComparer());
+            //    bool Continue = false;
+            //    foreach (var groupA in saChunksGrouped)
+            //    {
+            //        int countA = groupA.Count();
+            //        int countB = sbChunksGrouped.FirstOrDefault(g => new IChunkComparer().Equals(g.Key, groupA.Key))?.Count() ?? -1;
+            //        if (countA != countB)
+            //        {
+            //            PrevChunks = returnchunks;
+            //            Continue = true;
+            //            break;
+            //        }
+            //    }
+            //    if (Continue) continue;
+            //    break;
 
-            foreach (var chunk in AllChunks)
-            {
-                switch (chunk)
-                {
-                    case BaseChunk b:
-                        BaseChunks.Add(b);
-                        break;
-                    case ChainChunk c:
-                        ChainChunks.Add(c);
-                        break;
-                    case FuncChunk f:
-                        FuncChunks.Add(f);
-                        break;
-                    case SumChunk p:
-                        SumChunks.Add(p);
-                        break;
+            //} ;
 
-                    default:
-                        throw new Exception($"ProductChunk escaped condensing! This: {this}");
-                }
-            }
-
-
-            List<IChunk> Base = BaseChunks
-                .GroupBy(c => c, new IChunkComparerIgnoreCoeffExp())
-                .Select(g => Chunker.Base(g.Aggregate(1.0, (acc, h) => acc * h.Coeff), (g.Key as BaseChunk).Var, g.Count()))
-                .ToList();
-
-            List<IChunk> Chain = ChainChunks
-                .GroupBy(c => c, new IChunkComparerIgnoreCoeffExp())
-                .Select(g => 
-                {
-                    if (!(g as ChainChunk).Exp.IsNumber())
-                    {
-                        return Chunker.Chain(g.Aggregate(1.0, (acc, h) => acc * h.Coeff), (g.Key as ChainChunk).Chunk.Copy(), new SumChunk(g.Select(c => c.Exp).ToList()));
-                    }
-                    else 
-                    {
-                        return Chunker.Chain(g.Aggregate(1.0, (acc, h) => acc * h.Coeff), (g.Key as ChainChunk).Chunk.Copy(), new BaseChunk(g.Sum(c => (c.Exp as BaseChunk).AsNumber())));
-                    }
-                })
-                .ToList();
-
-            List<IChunk> Func = FuncChunks
-                .GroupBy(c => c, new IChunkComparerIgnoreCoeff())
-                .Select(g => Chunker.Chain(g.Aggregate(1.0, (acc, h) => acc * h.Coeff), g.Key.Copy(), new BaseChunk(g.Count())))
-                .ToList();
-
-            List<IChunk> Sum = SumChunks
-                .GroupBy(c => c, new IChunkComparerIgnoreCoeff())
-                .Select(g => Chunker.Chain(g.Aggregate(1.0, (acc, h) => acc * h.Coeff), g.Key.Copy(), new BaseChunk(g.Count())))
-                .ToList();
-
-            List<IChunk> returnchunks = new List<IChunk>();
-
-            returnchunks.AddRange(Base);
-            returnchunks.AddRange(Chain);
-            returnchunks.AddRange(Func);
-            returnchunks.AddRange(Sum);
-
-            return Chunker.Product(returnchunks);
+            //return Chunker.Product(PrevChunks, Coeff);
 
             #region Old 2 Chunk Method
             //IChunk a = Chunk1.Simplified();
@@ -162,6 +126,129 @@ namespace RaviinLib.CAS
             #endregion
         }
 
+        private List<IChunk> SimplificationLogic(List<IChunk> chunks)
+        {
+            var AllChunks = chunks.SelectMany(c => Chunker.ProductGetChunksOf(c)).Select(c => c.Simplified());
+
+            List<BaseChunk> BaseChunks = new List<BaseChunk>();
+
+            Dictionary<IChunk, List<IChunk>> OtherGroups = new Dictionary<IChunk, List<IChunk>>(new IChunkComparer());
+            //List<ChainChunk> ChainChunks = new List<ChainChunk>();
+            //List<FuncChunk> FuncChunks = new List<FuncChunk>();
+            //List<SumChunk> SumChunks = new List<SumChunk>();
+
+
+            foreach (var chunk in AllChunks)
+            {
+                switch (chunk)
+                {
+                    case BaseChunk b:
+                        BaseChunks.Add(b);
+                        break;
+                    case ProductChunk p:
+                        throw new Exception($"ProductChunk escaped condensing! This: {this}");
+                    case ChainChunk c:
+                        if (OtherGroups.TryGetValue(c.Chunk,out List<IChunk> KeyListChain))
+                        {
+                            KeyListChain.Add(c);
+                        }
+                        else
+                        {
+                            OtherGroups[c.Chunk] = new List<IChunk>() { c };
+                        }
+                        break;
+
+                    default:
+                        if (OtherGroups.TryGetValue(chunk, out List<IChunk> KeyListDefault))
+                        {
+                            KeyListDefault.Add(chunk);
+                        }
+                        else
+                        {
+                            OtherGroups[chunk] = new List<IChunk>() { chunk };
+                        }
+                        break;
+
+
+                        //case ChainChunk c:
+                        //    ChainChunks.Add(c);
+                        //    break;
+                        //case FuncChunk f:
+                        //    FuncChunks.Add(f);
+                        //    break;
+                        //case SumChunk p:
+                        //    SumChunks.Add(p);
+                        //    break;
+
+                        //default:
+                        //    throw new Exception($"ProductChunk escaped condensing! This: {this}");
+                }
+            }
+
+
+            List<IChunk> Base = BaseChunks
+                .GroupBy(c => c, new IChunkComparerIgnoreCoeffExp())
+                .Select(g => Chunker.Base(g.Aggregate(1.0, (acc, h) => acc * h.Coeff), (g.Key as BaseChunk).Var, g.Sum(c => c.Exp)))
+                .ToList();
+
+            List<IChunk> Others = new List<IChunk>();
+            foreach (var Item in OtherGroups)
+            {
+                double totalCoeff = 1.0;
+                IChunk totalExp = new BaseChunk(0);
+
+                foreach (var Chunk in Item.Value)
+                {
+                    totalCoeff *= Chunk.Coeff;
+                    if (Chunk is ChainChunk c)
+                    {
+                        totalExp = Chunker.Sum(totalExp,c.Exp);
+                    }
+                    else
+                    {
+                        totalExp = Chunker.Sum(totalExp, new BaseChunk(1));
+                    }
+                }
+
+                Others.Add(Chunker.Chain(totalCoeff,Item.Key,totalExp));
+            }
+
+            //List<IChunk> Chain = ChainChunks
+            //    .GroupBy(c => c, new IChunkComparerIgnoreCoeffExp())
+            //    .Select(g =>
+            //    {
+            //        if (!(g.Key as ChainChunk).Exp.IsNumber())
+            //        {
+            //            return Chunker.Chain(g.Aggregate(1.0, (acc, h) => acc * h.Coeff), (g.Key as ChainChunk).Chunk.Copy(), new SumChunk(g.Select(c => c.Exp).ToList()));
+            //        }
+            //        else
+            //        {
+            //            return Chunker.Chain(g.Aggregate(1.0, (acc, h) => acc * h.Coeff), (g.Key as ChainChunk).Chunk.Copy(), new BaseChunk(g.Sum(c => (c.Exp as BaseChunk).AsNumber())));
+            //        }
+            //    })
+            //    .ToList();
+
+            //List<IChunk> Func = FuncChunks
+            //    .GroupBy(c => c, new IChunkComparerIgnoreCoeff())
+            //    .Select(g => Chunker.Chain(g.Aggregate(1.0, (acc, h) => acc * h.Coeff), g.Key.Copy(), new BaseChunk(g.Count())))
+            //    .ToList();
+
+            //List<IChunk> Sum = SumChunks
+            //    .GroupBy(c => c, new IChunkComparerIgnoreCoeff())
+            //    .Select(g => Chunker.Chain(g.Aggregate(1.0, (acc, h) => acc * h.Coeff), g.Key.Copy(), new BaseChunk(g.Count())))
+            //    .ToList();
+
+            List<IChunk> returnchunks = new List<IChunk>();
+
+            returnchunks.AddRange(Base);
+            returnchunks.AddRange(Others);
+            //returnchunks.AddRange(Chain);
+            //returnchunks.AddRange(Func);
+            //returnchunks.AddRange(Sum);
+
+            return returnchunks;
+        }
+
 
 
         public IChunk Derivative(string Var)
@@ -169,7 +256,10 @@ namespace RaviinLib.CAS
             IChunk first = Chunks[0];
             List<IChunk> rest = Chunks.Skip(1).Select(c => c.Copy()).ToList();
 
-            return Chunker.Sum(Chunker.Product(first.Derivative(Var),new ProductChunk(rest)),Chunker.Product(first,new ProductChunk(rest).Derivative(Var)),Coeff);
+            if (rest.Count == 0) return first.Derivative(Var);
+            var restChunk = (rest.Count == 1) ? rest[0] : new ProductChunk(rest);
+
+            return Chunker.Sum(Chunker.Product(first.Derivative(Var), restChunk),Chunker.Product(first.Copy(), restChunk.Derivative(Var)),Coeff);
 
 
             //var Chunk1Derivative = Chunk1.Derivative(Var);

@@ -685,7 +685,8 @@ namespace RaviinLib.CAS
 
         public static IChunk Product(IChunk a, IChunk b, double Coeff = 1)
         {
-            if (a.IsZero() || b.IsZero() || a.Coeff == 0 || b.Coeff == 0) return new BaseChunk(0);
+            if (a.IsZero() || a.Coeff == 0) return new BaseChunk(0);
+            if (b.IsZero() || b.Coeff == 0) return new BaseChunk(0);
 
             if (a.IsOne()) return b.MultiplyBy(Coeff);
             if (b.IsOne()) return a.MultiplyBy(Coeff);
@@ -695,7 +696,7 @@ namespace RaviinLib.CAS
                 BaseChunk ba = (BaseChunk)a;
                 BaseChunk bb = (BaseChunk)b;
 
-                return new BaseChunk(Math.Pow(ba.Coeff,ba.Exp) * Math.Pow(bb.Coeff, bb.Exp) * Coeff);
+                return new BaseChunk(ba.AsNumber() * bb.AsNumber() * Coeff);
             }
 
             if (a.IsNumber())
@@ -707,14 +708,69 @@ namespace RaviinLib.CAS
                 return a.MultiplyBy((b as BaseChunk).AsNumber());
             }
 
-            IChunk aCopy = a.Copy();
-            IChunk bCopy = b.Copy();
+            var allChunks = ProductGetChunksOf(a).Concat(ProductGetChunksOf(b));
 
-            Coeff *= aCopy.Coeff * bCopy.Coeff;
-            aCopy.Coeff = 1;
-            bCopy.Coeff = 1;
+            var numbers = new List<BaseChunk>();
+            var others = new List<IChunk>();
+            foreach (var Chunk in allChunks)
+            {
+                if (Chunk.IsZero() || Chunk.Coeff == 0)
+                {
+                    return new BaseChunk(0);
+                }
+                else if (Chunk.IsNumber())
+                {
+                    numbers.Add((BaseChunk)Chunk);
+                }
+                else
+                {
+                    others.Add(Chunk);
+                }
+            }
 
-            return new ProductChunk(aCopy, bCopy, Coeff);
+            double numProd = 1;
+            foreach (var c in numbers)
+            {
+                numProd *= c.AsNumber();
+            }
+
+            if (others.Count == 0)
+            {
+                return new BaseChunk(numProd).MultiplyBy(Coeff);
+            }
+
+            return new ProductChunk(others, Coeff * numProd);
+
+            //if (a.IsZero() || b.IsZero() || a.Coeff == 0 || b.Coeff == 0) return new BaseChunk(0);
+
+            //if (a.IsOne()) return b.MultiplyBy(Coeff);
+            //if (b.IsOne()) return a.MultiplyBy(Coeff);
+
+            //if (a.IsNumber() && b.IsNumber())
+            //{
+            //    BaseChunk ba = (BaseChunk)a;
+            //    BaseChunk bb = (BaseChunk)b;
+
+            //    return new BaseChunk(Math.Pow(ba.Coeff,ba.Exp) * Math.Pow(bb.Coeff, bb.Exp) * Coeff);
+            //}
+
+            //if (a.IsNumber())
+            //{
+            //    return b.MultiplyBy((a as BaseChunk).AsNumber());
+            //}
+            //if (b.IsNumber())
+            //{
+            //    return a.MultiplyBy((b as BaseChunk).AsNumber());
+            //}
+
+            //IChunk aCopy = a.Copy();
+            //IChunk bCopy = b.Copy();
+
+            //Coeff *= aCopy.Coeff * bCopy.Coeff;
+            //aCopy.Coeff = 1;
+            //bCopy.Coeff = 1;
+
+            //return new ProductChunk(aCopy, bCopy, Coeff);
         }
         public static IChunk Product(List<IChunk> Chunks, double Coeff = 1)
         {
@@ -931,22 +987,24 @@ namespace RaviinLib.CAS
         }
 
 
-        public static IEnumerable<IChunk> SumGetChunksOf(IChunk c)
+        public static IEnumerable<IChunk> SumGetChunksOf(IChunk Chunk)
         {
-            if (c is SumChunk s)
+            if (Chunk is SumChunk s)
             {
-                return s.Chunks.Select(cp => cp.MultiplyBy(s.Coeff)).ToList();
+                return s.Chunks.Select(c => c.MultiplyBy(s.Coeff)).ToList();
             }
-            return new[] { c };
+            return new[] { Chunk };
         }
 
-        public static IEnumerable<IChunk> ProductGetChunksOf(IChunk c)
+        public static IEnumerable<IChunk> ProductGetChunksOf(IChunk Chunk)
         {
-            if (c is ProductChunk s)
+            if (Chunk is ProductChunk s)
             {
-                return s.Chunks.Select(cp => cp.MultiplyBy(s.Coeff)).ToList();
+                var retList = s.Chunks.Select(c => c.Copy()).ToList();
+                retList.First().Multiply(s.Coeff);
+                return retList;
             }
-            return new[] { c };
+            return new[] { Chunk };
         }
         #endregion
 
