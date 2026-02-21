@@ -114,7 +114,7 @@ namespace RaviinLib.CAS
 
         public static IChunk Chunckify(string Fx)
         {
-            if (Fx == string.Empty) return null; //throw new("Fx has no length.");
+            if (Fx == string.Empty) throw new Exception("Fx has no length."); //return null;
 
             Fx = Fx.Replace(" ", "");
 

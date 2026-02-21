@@ -458,7 +458,7 @@ namespace RaviinLib.CAS
 
                 foreach (var c in s.Chunks)
                 {
-                    var Var = Chunckify(c.ToString()).GetVariables();
+                    var Var = c.GetVariables(); //Chunckify(c.ToString()).GetVariables();
 
                     if (Var.Count > 1) throw new Exception("Function is not separable.");
 
@@ -702,7 +702,7 @@ namespace RaviinLib.CAS
         /// Recalculates and returns a simplified version of this function without modifying the original function.
         /// </summary>
         /// <returns>The simplified function.</returns>
-        public Function GetSimplified() => new Function(IFunction.Simplified() ?? new BaseChunk(0, null, 1));
+        public Function GetSimplified() => new Function(IFunction.Simplified());
         #endregion
 
         #region Overides
