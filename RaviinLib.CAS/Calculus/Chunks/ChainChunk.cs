@@ -172,7 +172,8 @@ namespace RaviinLib.CAS
         {
             if (Exp.IsNumber())
             {
-                double LoopCount = (Exp as BaseChunk).AsNumber();
+                double expNum = (Exp as BaseChunk).AsNumber();
+                double LoopCount = Math.Abs(expNum);
                 if (LoopCount % 1 != 0) return Chunker.Chain(Coeff, Chunk.Expanded(), Exp.Expanded());
 
 
@@ -183,7 +184,8 @@ namespace RaviinLib.CAS
                 {
                     retChunks.Add(copy.Copy());
                 }
-                return Chunker.Product(retChunks, Coeff);
+                if (expNum < 0) return Chunker.Chain(1,Chunker.Product(retChunks, Coeff),new BaseChunk(-1));
+                else return Chunker.Product(retChunks, Coeff);
             }
             return Chunker.Chain(Coeff, Chunk.Expanded(), Exp.Expanded());
 
