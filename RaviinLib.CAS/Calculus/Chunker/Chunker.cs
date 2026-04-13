@@ -112,7 +112,7 @@ namespace RaviinLib.CAS
 
         #region Chunkify
 
-        public static IChunk Chunckify(string Fx)
+        public static IChunk Chunkify(string Fx)
         {
             if (Fx == string.Empty) throw new Exception("Fx has no length."); //return null;
 

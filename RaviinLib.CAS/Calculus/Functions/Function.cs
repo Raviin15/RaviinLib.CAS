@@ -167,7 +167,7 @@ namespace RaviinLib.CAS
         #region Constructors
         public Function(string Fx)
         {
-            IFunction = Chunckify(Fx);
+            IFunction = Chunkify(Fx);
         }
         public Function(IChunk Fx)
         {
@@ -857,7 +857,7 @@ namespace RaviinLib.CAS
         }
         public static implicit operator Function(double a)
         {
-            return new Function(a.ToString());
+            return new Function(new BaseChunk(a));
         }
         #endregion
 

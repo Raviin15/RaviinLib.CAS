@@ -258,11 +258,11 @@ namespace RaviinLib.CAS
                 //    else newChunks.Add(Expanded);
 
                 //}
-                newChunks.Add(Expanded);
+                newChunks.Add(Chunker.Product(Expanded , new BaseChunk(Coeff)));
             }
             //if (newChunks.Count == 1) return newChunks[0];
 
-            return Chunker.Sum(newChunks, Coeff);
+            return Chunker.Sum(newChunks);
         }
 
         public string ToLatex()

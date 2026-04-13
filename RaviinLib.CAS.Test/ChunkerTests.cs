@@ -264,7 +264,7 @@
         public void ChunkerChunkify(string Fx)
         {
             Assert.That(
-                Chunker.Chunckify(Fx),
+                Chunker.Chunkify(Fx),
                 Is.EqualTo(StringChunkPairs[Fx]).Using(Comp)
             );
         }
@@ -290,7 +290,7 @@
 
         public void ChunkerChunkifyShouldThrow(string Fx)
         {
-            Assert.Throws(typeof(Exception),() => Chunker.Chunckify(Fx));
+            Assert.Throws(typeof(Exception),() => Chunker.Chunkify(Fx));
         }
     }
 }
