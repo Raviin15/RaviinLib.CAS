@@ -463,7 +463,7 @@ namespace RaviinLib.CAS
         public IUnit GetUnit(Dictionary<string, IUnit> VariableUnitPairs)
         {
             var Unit1 = Chunks[0].GetUnit(VariableUnitPairs);
-            var Unit2 = (new ProductChunk(Chunks.Skip(1).ToList())).GetUnit(VariableUnitPairs);
+            var Unit2 = (Chunker.Product(Chunks.Skip(1).ToList())).GetUnit(VariableUnitPairs);
 
             if (Unit1 is BaseUnit ab && Unit2 is BaseUnit bb)
             {
