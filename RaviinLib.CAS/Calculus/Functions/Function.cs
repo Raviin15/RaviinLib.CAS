@@ -861,7 +861,17 @@ namespace RaviinLib.CAS
         }
         #endregion
 
+        #region Equality
+        public static bool operator ==(Function a, Function b)
+        {
+            return new IChunkComparer().Equals(a.IFunction, b.IFunction);
+        }
+        public static bool operator !=(Function a, Function b)
+        {
+            return !(a == b);
+        }
         #endregion
 
+        #endregion
     }
 }
