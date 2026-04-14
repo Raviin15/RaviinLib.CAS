@@ -318,7 +318,7 @@ namespace RaviinLib.CAS
         public double Subs(Dictionary<string, double> Values)
         {
 
-            double returnVar = 0;
+            double returnVar = 1;
             foreach (var chunk in Chunks)
             {
                 returnVar *= chunk.Subs(Values);
