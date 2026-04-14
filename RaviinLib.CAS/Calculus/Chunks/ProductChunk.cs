@@ -460,40 +460,12 @@ namespace RaviinLib.CAS
             return $@"{coeff}\left(" + string.Join("*", Chunks.Select(c => c.ToLatex())) + @"\right)";
         }
 
-        public IUnit GetUnit(Dictionary<string, IUnit> VariableUnitPairs)
+        public Unit GetUnit(Dictionary<string, Unit> VariableUnitPairs)
         {
             var Unit1 = Chunks[0].GetUnit(VariableUnitPairs);
             var Unit2 = (Chunker.Product(Chunks.Skip(1).ToList())).GetUnit(VariableUnitPairs);
 
-            if (Unit1 is BaseUnit ab && Unit2 is BaseUnit bb)
-            {
-                List<IUnit> num = new List<IUnit>();
-                List<IUnit> den = new List<IUnit>();
-                if (ab.Power >= 0) num.Add(ab);
-                else den.Add(ab.Exponentiate(-1));
-                if (bb.Power >= 0) num.Add(bb);
-                else den.Add(bb.Exponentiate(-1));
-                return new Unit(num,den);
-            }
-            else if (Unit1 is BaseUnit ab2 && Unit2 is Unit bu)
-            {
-                if (ab2.Power >= 0) bu.Numerator.Add(ab2);
-                else bu.Denominator.Add(ab2.Exponentiate(-1));
-                return bu;
-            }
-            else if (Unit1 is Unit au && Unit2 is BaseUnit bb2)
-            {
-                if (bb2.Power >= 0) au.Numerator.Add(bb2);
-                else au.Denominator.Add(bb2.Exponentiate(-1));
-                return au;
-            }
-            else if (Unit1 is Unit au2 && Unit2 is Unit bu2)
-            {
-                //Combine Num and Den lists;
-                return new Unit(new List<IUnit>(au2.Numerator).Concat(bu2.Numerator).ToList(), new List<IUnit>(au2.Denominator).Concat(bu2.Denominator).ToList());
-            }
-
-            throw new Exception("Something went wrong! No case for types.");
+            return Unit1 * Unit2;
         }
 
         public IChunk Antiderivative(string Var)

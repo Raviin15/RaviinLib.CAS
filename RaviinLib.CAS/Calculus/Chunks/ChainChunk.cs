@@ -246,14 +246,14 @@ namespace RaviinLib.CAS
             return $@"{coeff}{Inner}{exp}";
         }
 
-        public IUnit GetUnit(Dictionary<string, IUnit> VariableUnitPairs)
+        public Unit GetUnit(Dictionary<string, Unit> VariableUnitPairs)
         {
-            IUnit Inner = Chunk.GetUnit(VariableUnitPairs);
-            var ExpUnit = Exp.GetUnit(VariableUnitPairs).Simplify();
+            Unit Inner = Chunk.GetUnit(VariableUnitPairs);
+            Unit ExpUnit = Exp.GetUnit(VariableUnitPairs);
 
-            if (!(ExpUnit is BaseUnit)) throw new Exception($"Can not take a unit^unit: {Inner}^({ExpUnit})");
+            if (!ExpUnit.IsUnitless) throw new Exception($"Can not take a unit^unit: {Inner}^({ExpUnit})");
 
-            if (Exp is BaseChunk b && b.Var == null) return Inner.Exponentiate(Math.Pow(b.Coeff,b.Exp));
+            if (Exp.IsNumber()) return Inner^((BaseChunk)Exp).AsNumber();
 
             throw new Exception($"Can not evaluate power: {Exp}");
         }

@@ -425,7 +425,7 @@ namespace RaviinLib.CAS
             return $"{coeff}{FunctionToLatex[Function]}{Inner}";
         }
 
-        public IUnit GetUnit(Dictionary<string, IUnit> VariableUnitPairs)
+        public Unit GetUnit(Dictionary<string, Unit> VariableUnitPairs)
         {
             var a = Chunk.GetUnit(VariableUnitPairs);
             var b = SecondChunk?.GetUnit(VariableUnitPairs);
@@ -433,72 +433,72 @@ namespace RaviinLib.CAS
             switch (Function)
             {
                 case Functions.Sin:
-                    return new BaseUnit(Units.None);
+                    return new Unit();
                 case Functions.Cos:
-                    return new BaseUnit(Units.None);
+                    return new Unit();
                 case Functions.Tan:
-                    return new BaseUnit(Units.None);
+                    return new Unit();
                 case Functions.Sec:
-                    return new BaseUnit(Units.None);
+                    return new Unit();
                 case Functions.Csc:
-                    return new BaseUnit(Units.None);
+                    return new Unit();
                 case Functions.Cot:
-                    return new BaseUnit(Units.None);
+                    return new Unit();
                 case Functions.Sinh:
-                    return new BaseUnit(Units.None);
+                    return new Unit();
                 case Functions.Cosh:
-                    return new BaseUnit(Units.None);
+                    return new Unit();
                 case Functions.Tanh:
-                    return new BaseUnit(Units.None);
+                    return new Unit();
                 case Functions.Sech:
-                    return new BaseUnit(Units.None);
+                    return new Unit();
                 case Functions.Csch:
-                    return new BaseUnit(Units.None);
+                    return new Unit();
                 case Functions.Coth:
-                    return new BaseUnit(Units.None);
+                    return new Unit();
                 case Functions.ASin:
-                    return new BaseUnit(Units.None);
+                    return new Unit();
                 case Functions.ACos:
-                    return new BaseUnit(Units.None);
+                    return new Unit();
                 case Functions.ATan:
-                    return new BaseUnit(Units.None);
+                    return new Unit();
                 case Functions.ASec:
-                    return new BaseUnit(Units.None);
+                    return new Unit();
                 case Functions.ACsc:
-                    return new BaseUnit(Units.None);
+                    return new Unit();
                 case Functions.ACot:
-                    return new BaseUnit(Units.None);
+                    return new Unit();
                 case Functions.ASinh:
-                    return new BaseUnit(Units.None);
+                    return new Unit();
                 case Functions.ACosh:
-                    return new BaseUnit(Units.None);
+                    return new Unit();
                 case Functions.ATanh:
-                    return new BaseUnit(Units.None);
+                    return new Unit();
                 case Functions.ASech:
-                    return new BaseUnit(Units.None);
+                    return new Unit();
                 case Functions.ACsch:
-                    return new BaseUnit(Units.None);
+                    return new Unit();
                 case Functions.ACoth:
-                    return new BaseUnit(Units.None);
+                    return new Unit();
                 case Functions.Exp:
-                    return new BaseUnit(Units.None);
+                    return new Unit();
                 case Functions.ln:
-                    return new BaseUnit(Units.None);
+                    return new Unit();
                 case Functions.log:
-                    return new BaseUnit(Units.None);
+                    return new Unit();
                 case Functions.sqrt:
-                    return a.Exponentiate(0.5);
+                    return a^0.5;
                 case Functions.cbrt:
-                    return a.Exponentiate(1.0/3.0);
+                    return a^(1.0/3.0);
                 case Functions.Abs:
                     if (a != b) throw new Exception($"Units musts match: {Function}({a},{b})");
-                    return new BaseUnit(Units.None);
+                    return a;
                 case Functions.Min:
                     if (a != b) throw new Exception($"Units musts match: {Function}({a},{b})");
-                    return new BaseUnit(Units.None);
+                    return a;
                 case Functions.Max:
                     if (a != b) throw new Exception($"Units musts match: {Function}({a},{b})");
-                    return new BaseUnit(Units.None);
+                    return a;
                 default:
                     throw new Exception($"{Function} is not Implemented");
             }

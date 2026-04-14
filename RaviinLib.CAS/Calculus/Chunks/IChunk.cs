@@ -29,7 +29,7 @@ namespace RaviinLib.CAS
 
         IChunk Expanded();
 
-        IUnit GetUnit(Dictionary<string, IUnit> VariableUnitPairs);
+        Unit GetUnit(Dictionary<string, Unit> VariableUnitPairs);
 
         List<string> GetVariables();
 

@@ -43,7 +43,7 @@ namespace RaviinLib.CAS
                 _Latex = null;
             }
         }
-        
+
         #endregion
 
         #region Cached Parameters
@@ -489,7 +489,7 @@ namespace RaviinLib.CAS
             if (Order > 170) Order = 170;
             if (Variables.Count > 1) throw new Exception("Can not get the aproximation with respect to mroe than one variable.");
 
-            var Comparer = new IChunkComparer();
+            //var Comparer = new IChunkComparer();
 
             Function init = Subs(Center);
 
@@ -508,6 +508,23 @@ namespace RaviinLib.CAS
             } while (LoopCount <= Order); // (!Comparer.Equals(prevDeriv.IFunction, new BaseChunk(0,null,1)) &&
 
             return init;
+        }
+
+        /// <summary>
+        /// Sets the Unit of this Function based on the passed Dictionary.
+        /// If a unit is not provided for a variable, it is assumed to be unitless.
+        /// </summary>
+        /// <param name="VariableUnits">
+        /// A dictionary mapping variable names to their corresponding units.
+        /// </param>
+        public Unit GetUnit(Dictionary<string, Unit> VariableUnits)
+        {
+            return IFunction.GetUnit(VariableUnits);
+        }
+
+        public Function ConvertToUnit(Unit CurrentUnit, Unit NewUnit)
+        {
+            return this * (CurrentUnit.GetConversion(NewUnit).ConversionRatio);
         }
 
         #endregion
@@ -722,7 +739,7 @@ namespace RaviinLib.CAS
             if (IFunction is SumChunk) return (String.StartsWith("(") && String.EndsWith(")")) ? String.Substring(1, String.Length - 2) : String;
 
             return String;
-                
+
         }
 
         /// <summary>

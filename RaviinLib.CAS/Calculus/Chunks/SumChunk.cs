@@ -272,17 +272,17 @@ namespace RaviinLib.CAS
             return $@"{coeff}\left(" + string.Join("+", Chunks.Select(c => c.ToLatex())) + @"\right)";
         }
 
-        public IUnit GetUnit(Dictionary<string, IUnit> VariableUnitPairs)
+        public Unit GetUnit(Dictionary<string, Unit> VariableUnitPairs)
         {
-            List<IUnit> UnitList = new List<IUnit>();
+            List<Unit> UnitList = new List<Unit>();
             foreach (var Chunk in Chunks)
             {
                 UnitList.Add(Chunk.GetUnit(VariableUnitPairs));
             }
 
-            var simp = UnitList.Select(c => c.Simplify());
-            var DistinctCount = simp.Distinct(new IUnitComparer()).Count();
-            if (DistinctCount == 0) return new BaseUnit(Units.None);
+            var simp = UnitList; //UnitList.Select(c => c.Simplify());
+            var DistinctCount = simp.Distinct().Count();
+            if (DistinctCount == 0) return new Unit();
 
             if (DistinctCount != 1) throw new Exception($"Can not add different units: {string.Join(" + ", UnitList.Distinct().Select(c => c.ToString()))}");
             return UnitList[0];

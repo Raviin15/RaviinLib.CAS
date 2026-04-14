@@ -3,7 +3,7 @@ using System.Linq;
 using System.Collections.Generic;
 using RaviinLib.CAS;
 
-namespace RaviinLib.CAS
+namespace RaviinLib.CAS.Unused
 {
     #region Variable Implementations
 
@@ -807,4 +807,361 @@ namespace RaviinLib.CAS
     }
 
     #endregion
+}
+
+namespace RaviinLib.CAS
+{
+    public class Unit
+    {
+
+        #region Unit Conversion
+
+        #region Lengths
+        public static HashSet<string> Lengths = new HashSet<string>()
+        {
+            "mm",
+            "cm",
+            "m",
+            "km",
+            "ft",
+            "in",
+            "yd",
+            "mi"
+        };
+
+        public static Dictionary<string, double> LengthConversionsToMeter = new Dictionary<string, double>()
+        {
+            { "mm", 0.001 },
+            { "cm", 0.01 },
+            { "m", 1 },
+            { "km", 1000 },
+            { "ft", 0.3048 },
+            { "in", 0.0254 },
+            { "yd", 0.9144 },
+            { "mi", 1609.34 }
+        };
+
+        public static double ConvertLength(double Value, string FromUnit, string ToUnit)
+        {
+            if (!Lengths.Contains(FromUnit) || !Lengths.Contains(ToUnit)) throw new Exception("Invalid length unit.");
+            double valueInMeters = Value * LengthConversionsToMeter[FromUnit];
+            return valueInMeters / LengthConversionsToMeter[ToUnit];
+        }
+        #endregion
+
+        #region Masses
+        public static HashSet<string> Masses = new HashSet<string>()
+        {
+            "mg",
+            "g",
+            "kg",
+            "oz",
+            "lb"
+        };
+
+        public static Dictionary<string, double> MassConversionsToGram = new Dictionary<string, double>()
+        {
+            { "mg", 0.001 },
+            { "g", 1 },
+            { "kg", 1000 },
+            { "oz", 28.3495 },
+            { "lb", 453.592 }
+        };
+
+        public static double ConvertMass(double Value, string FromUnit, string ToUnit)
+        {
+            if (!Masses.Contains(FromUnit) || !Masses.Contains(ToUnit)) throw new Exception("Invalid mass unit.");
+            double valueInGrams = Value * MassConversionsToGram[FromUnit];
+            return valueInGrams / MassConversionsToGram[ToUnit];
+        }
+        #endregion
+
+        #region Times
+        public static HashSet<string> Times = new HashSet<string>()
+        {
+            "ms",
+            "s",
+            "min",
+            "hr"
+        };
+
+        public static Dictionary<string, double> TimeConversionsToSecond = new Dictionary<string, double>()
+        {
+            { "ms", 0.001 },
+            { "s", 1 },
+            { "min", 60 },
+            { "hr", 3600 }
+        };
+
+        public static double ConvertTime(double Value, string FromUnit, string ToUnit)
+        {
+            if (!Times.Contains(FromUnit) || !Times.Contains(ToUnit)) throw new Exception("Invalid time unit.");
+            double valueInSeconds = Value * TimeConversionsToSecond[FromUnit];
+            return valueInSeconds / TimeConversionsToSecond[ToUnit];
+        }
+        #endregion
+
+        #region Temperatures
+        public static HashSet<string> Temperatures = new HashSet<string>()
+        {
+            "C",
+            "F",
+            "K"
+        };
+
+        public static Dictionary<string, Func<double, double>> TemperatureToCelsius = new Dictionary<string, Func<double, double>>()
+        {
+            { "C", x => x },
+            { "F", x => (x - 32) * 5 / 9 },
+            { "K", x => x - 273.15 }
+        };
+
+        public static double ConvertTemperature(double Value, string FromUnit, string ToUnit)
+        {
+            if (!Temperatures.Contains(FromUnit) || !Temperatures.Contains(ToUnit)) throw new Exception("Invalid temperature unit.");
+            double valueInCelsius = TemperatureToCelsius[FromUnit](Value);
+            if (ToUnit == "C") return valueInCelsius;
+            else if (ToUnit == "F") return valueInCelsius * 9 / 5 + 32;
+            else if (ToUnit == "K") return valueInCelsius + 273.15;
+            else throw new Exception("Invalid temperature unit.");
+        }
+        #endregion
+
+        #region Amounts
+        public static HashSet<string> Amounts = new HashSet<string>()
+        {
+            "mol"
+        };
+
+        public static Dictionary<string, double> AmountConversionsToMole = new Dictionary<string, double>()
+        {
+            { "mol", 1 }
+        };
+
+        public static double ConvertAmount(double Value, string FromUnit, string ToUnit)
+        {
+            if (!Amounts.Contains(FromUnit) || !Amounts.Contains(ToUnit)) throw new Exception("Invalid amount unit.");
+            double valueInMoles = Value * AmountConversionsToMole[FromUnit];
+            return valueInMoles / AmountConversionsToMole[ToUnit];
+        }
+        #endregion
+
+        #region Unit Definitions
+        public static Dictionary<string, HashSet<string>> UnitCategories = new Dictionary<string, HashSet<string>>()
+        {
+            { "Length", Lengths },
+            { "Mass", Masses },
+            { "Time", Times },
+            { "Temperature", Temperatures },
+            { "Amount", Amounts }
+        };
+
+        public static Dictionary<string, string> UnitPriorities = new Dictionary<string, string>()
+        {
+            { "Length", "m" },
+            { "Mass", "g" },
+            { "Time", "s" },
+            { "Temperature", "C" },
+            { "Amount", "mol" }
+        };
+
+        public static Dictionary<string, Func<double, string, string, double>> CategoryConversions = new Dictionary<string, Func<double, string, string, double>>()
+        {
+            { "Length", ConvertLength },
+            { "Mass", ConvertMass },
+            { "Time", ConvertTime },
+            { "Temperature", ConvertTemperature },
+            { "Amount", ConvertAmount }
+        };
+        #endregion
+
+        #region Helper Methods
+        public static string GetUnitCategory(string Unit)
+        {
+            foreach (var category in UnitCategories)
+            {
+                if (category.Value.Contains(Unit)) return category.Key;
+            }
+            return null;
+        }
+
+        public static string GetPriorityUnit(string Category)
+        {
+            if (UnitPriorities.TryGetValue(Category, out string Value)) return Value;
+            throw new Exception($"Invalid unit category: {Category}");
+        }
+
+        public static double ConvertUnit(double Value, string FromUnit, string ToUnit)
+        {
+            string fromCategory = GetUnitCategory(FromUnit);
+            string toCategory = GetUnitCategory(ToUnit);
+            if (fromCategory == null) throw new Exception($"Invalid unit: {FromUnit}");
+            if (toCategory == null) throw new Exception($"Invalid unit: {ToUnit}");
+
+            if (fromCategory != toCategory) throw new Exception($"Incompatible units: {FromUnit}|{ToUnit}");
+
+            return CategoryConversions[fromCategory](Value, FromUnit, ToUnit);
+        }
+        #endregion
+
+        #region Adding Units and Categories
+        public static void AddUnit(string Category, string Unit, double ConversionToBase)
+        {
+            if (!UnitCategories.ContainsKey(Category)) throw new Exception("Invalid unit category.");
+            switch (Category)
+            {
+                case "Length":
+                    Lengths.Add(Unit);
+                    LengthConversionsToMeter[Unit] = ConversionToBase;
+                    break;
+                case "Mass":
+                    Masses.Add(Unit);
+                    MassConversionsToGram[Unit] = ConversionToBase;
+                    break;
+                case "Time":
+                    Times.Add(Unit);
+                    TimeConversionsToSecond[Unit] = ConversionToBase;
+                    break;
+                case "Temperature":
+                    Temperatures.Add(Unit);
+                    // Temperature conversion requires a function, not a simple multiplier
+                    break;
+                case "Amount":
+                    Amounts.Add(Unit);
+                    AmountConversionsToMole[Unit] = ConversionToBase;
+                    break;
+                default:
+                    throw new Exception("Invalid unit category.");
+            }
+        }
+
+        public static void AddUnit(List<(string Category, string Unit, double ConversionToBase)> Units)
+        {
+            foreach (var (Category, Unit, ConversionToBase) in Units)
+            {
+                AddUnit(Category, Unit, ConversionToBase);
+            }
+        }
+
+        public static void AddCategory(string Category, List<string> Units, string PriorityUnit, Func<double, string, string, double> ConversionFunc)
+        {
+            AddCategory(Category, new HashSet<string>(Units), PriorityUnit, ConversionFunc);
+        }
+
+        public static void AddCategory(string Category, HashSet<string> Units, string PriorityUnit, Func<double, string, string, double> ConversionFunc)
+        {
+            if (UnitCategories.ContainsKey(Category)) throw new Exception($"Category already exists: {Category}");
+            UnitCategories[Category] = new HashSet<string>(Units);
+            UnitPriorities[Category] = PriorityUnit;
+            CategoryConversions[Category] = ConversionFunc;
+        }
+        #endregion
+
+        #endregion
+
+
+        private Function FUnit { get; set; }
+
+        public bool IsUnitless => FUnit == null;
+
+        public Unit()
+        {
+            this.FUnit = null;
+        }
+
+        public Unit(Function Unit)
+        {
+            this.FUnit = Unit;
+        }
+
+        public Unit(string Unit)
+        {
+            if (string.IsNullOrEmpty(Unit)) this.FUnit = null;
+            else this.FUnit = new Function(Unit);
+        }
+
+        #region Misc Methods
+
+        public (Unit NewUnit, double ConversionRatio) GetConversion(Unit UnitToConvertTo)
+        {
+            var BaseUnits = UnitToConvertTo.FUnit.Variables;
+
+            var categories = BaseUnits.GroupBy(c => GetUnitCategory(c));
+
+            Dictionary<string, string> PriorityUnits = new Dictionary<string, string>();
+
+            foreach (var category in categories)
+            {
+                if (category.Count() == 1) PriorityUnits[category.Key] = category.First();
+                else PriorityUnits[category.Key] = GetPriorityUnit(category.Key);
+            }
+
+            Dictionary<string, Function> ReplaceVals = new Dictionary<string, Function>();
+            Dictionary<string, double> subsVals = new Dictionary<string, double>();
+
+            foreach (var unit in FUnit.Variables)
+            {
+                var Cat = Unit.GetUnitCategory(unit);
+                var PriorityUnit = PriorityUnits[Cat];
+                var Convers = Unit.ConvertUnit(1, unit, PriorityUnit);
+                ReplaceVals[unit] = new Function(PriorityUnit);
+                subsVals[unit] = Convers;
+            }
+
+            var NewUnit = FUnit.Replace(ReplaceVals);
+            var ConversionRatio = FUnit.Subs(subsVals);
+
+            if (NewUnit != UnitToConvertTo.FUnit) throw new Exception($"Units are not compatible: {this} => {UnitToConvertTo}");
+
+            return (new Unit(NewUnit), ConversionRatio);
+        }
+
+        public Unit Simplified()
+        {
+            if (FUnit == null) return new Unit();
+            return new Unit(FUnit.GetSimplified());
+        }
+
+        #endregion
+
+        #region Overides
+
+        public override string ToString()
+        {
+            return FUnit?.ToString() ?? "Unitless";
+        }
+
+        public static Unit operator +(Unit a, Unit b)
+        {
+            throw new Exception("Units cannot be added!");
+        }
+        public static Unit operator -(Unit a, Unit b)
+        {
+            throw new Exception("Units cannot be subtracted!");
+        }
+        public static Unit operator *(Unit a, Unit b)
+        {
+            return new Unit(a.FUnit * b.FUnit);
+        }
+        public static Unit operator /(Unit a, Unit b)
+        {
+            return new Unit(a.FUnit / b.FUnit);
+        }
+        public static Unit operator ^(Unit a, double b)
+        {
+            return new Unit(a.FUnit ^ b);
+        }
+
+        public static bool operator ==(Unit a, Unit b)
+        {            
+            return a.FUnit == b.FUnit;
+        }
+        public static bool operator !=(Unit a, Unit b)
+        {
+            return !(a == b);
+        }
+
+
+        #endregion
+    }
 }

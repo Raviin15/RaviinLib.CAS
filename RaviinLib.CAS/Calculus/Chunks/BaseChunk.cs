@@ -159,10 +159,10 @@ namespace RaviinLib.CAS
             return $"{coeff}{Var}{exp}";
         }
 
-        public IUnit GetUnit(Dictionary<string, IUnit> VariableUnitPairs)
+        public Unit GetUnit(Dictionary<string, Unit> VariableUnitPairs)
         {
-            if (Var == null || !VariableUnitPairs.TryGetValue(Var, out IUnit Unit)) return new BaseUnit(Units.None);
-            return Unit.Exponentiate(Exp);
+            if (Var == null || !VariableUnitPairs.TryGetValue(Var, out Unit Unit)) return new Unit();
+            return Unit^Exp;
         }
 
         public IChunk Antiderivative(string Var)
