@@ -774,6 +774,10 @@ namespace RaviinLib.CAS
             bcopy.Coeff *= -1;
             return new Function(Chunker.Sum(a.IFunction.Copy(), bcopy));
         }
+        public static Function operator ^(Function a, Function b)
+        {
+            return new Function(Chunker.Chain(1, a.IFunction.Copy(), b.IFunction.Copy()));
+        }
         #endregion
 
         #region double,Function
@@ -797,6 +801,10 @@ namespace RaviinLib.CAS
             var bcopy = b.IFunction.Copy();
             bcopy.Coeff *= -1;
             return new Function(Chunker.Sum( new BaseChunk(a), bcopy ));
+        }
+        public static Function operator ^(double a, Function b)
+        {
+            return new Function(Chunker.Chain(1, new BaseChunk(a), b.IFunction.Copy()));
         }
         #endregion
 
