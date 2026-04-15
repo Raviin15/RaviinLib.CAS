@@ -167,7 +167,7 @@ namespace RaviinLib.CAS
 
             List<IChunk> Func = FuncChunks
                 .GroupBy(c => c, new IChunkComparerIgnoreCoeff())
-                .Select(g => Chunker.Func((g.Key as FuncChunk).Chunk.Copy(), (g.Key as FuncChunk).Function, g.Sum(c => c.Coeff), (g.Key as FuncChunk).SecondChunk.Copy()))
+                .Select(g => Chunker.Func((g.Key as FuncChunk).Chunk.Copy(), (g.Key as FuncChunk).Function, g.Sum(c => c.Coeff), (g.Key as FuncChunk).SecondChunk?.Copy()))
                 .ToList();
 
             List<IChunk> Product = ProductChunks

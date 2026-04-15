@@ -9,7 +9,7 @@ using static RaviinLib.CAS.Chunker;
 
 namespace RaviinLib.CAS
 {
-    public class Function
+    public class Function : IEquatable<Function>
     {
         #region Replace Shorthand
         /// <summary>
@@ -881,11 +881,21 @@ namespace RaviinLib.CAS
         #region Equality
         public static bool operator ==(Function a, Function b)
         {
-            return new IChunkComparer().Equals(a.IFunction, b.IFunction);
+            return new IChunkComparer().Equals(a?.IFunction, b?.IFunction);
         }
         public static bool operator !=(Function a, Function b)
         {
             return !(a == b);
+        }
+        public bool Equals(Function obj)
+        {
+            return this == obj;
+        }
+        public override bool Equals(object obj) => Equals(obj as Function);
+
+        public override int GetHashCode()
+        {
+            return new IChunkComparer().GetHashCode(IFunction);
         }
         #endregion
 

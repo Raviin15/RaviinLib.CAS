@@ -1,7 +1,8 @@
-﻿using System;
-using System.Linq;
+﻿using RaviinLib.CAS;
+using System;
 using System.Collections.Generic;
-using RaviinLib.CAS;
+using System.Linq;
+using System.Xml.Linq;
 
 namespace RaviinLib.CAS.Unused
 {
@@ -811,7 +812,7 @@ namespace RaviinLib.CAS.Unused
 
 namespace RaviinLib.CAS
 {
-    public class Unit
+    public class Unit : IEquatable<Unit>
     {
 
         #region Unit Conversion
@@ -1060,7 +1061,16 @@ namespace RaviinLib.CAS
         #endregion
 
 
-        private Function FUnit { get; set; }
+        private Function _FUnit;
+        private Function FUnit
+        {
+            get => _FUnit;
+            set
+            {
+                if (value == null) _FUnit = null;
+                else _FUnit = value.GetSimplified();
+            }
+        }
 
         public bool IsUnitless => FUnit == null;
 
@@ -1077,6 +1087,7 @@ namespace RaviinLib.CAS
         public Unit(string Unit)
         {
             if (string.IsNullOrEmpty(Unit)) this.FUnit = null;
+            else if (Unit == "Unitless") this.FUnit = null;
             else this.FUnit = new Function(Unit);
         }
 
@@ -1141,14 +1152,21 @@ namespace RaviinLib.CAS
         }
         public static Unit operator *(Unit a, Unit b)
         {
+            if (a.IsUnitless) return new Unit(b.FUnit);
+            if (b.IsUnitless) return new Unit(a.FUnit);
+
             return new Unit(a.FUnit * b.FUnit);
         }
         public static Unit operator /(Unit a, Unit b)
         {
+            if (a.IsUnitless) return new Unit(b.FUnit^-1);
+            if (b.IsUnitless) return new Unit(a.FUnit);
+
             return new Unit(a.FUnit / b.FUnit);
         }
         public static Unit operator ^(Unit a, double b)
         {
+            if (a.IsUnitless) return new Unit();
             return new Unit(a.FUnit ^ b);
         }
 
@@ -1161,6 +1179,16 @@ namespace RaviinLib.CAS
             return !(a == b);
         }
 
+        public bool Equals(Unit obj)
+        {
+            return this == obj;
+        }
+        public override bool Equals(object obj) => Equals(obj as Unit);
+
+        public override int GetHashCode()
+        {
+            return FUnit.GetHashCode();
+        }
 
         #endregion
     }
