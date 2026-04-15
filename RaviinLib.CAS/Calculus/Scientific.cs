@@ -1187,7 +1187,7 @@ namespace RaviinLib.CAS
 
         public override int GetHashCode()
         {
-            return FUnit.GetHashCode();
+            return FUnit?.GetHashCode() ?? 0;
         }
 
         #endregion
